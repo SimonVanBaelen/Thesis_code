@@ -91,7 +91,7 @@ def cluster_stream(labels, series, start_index, skip, method, rank=15, iteration
     # labels, series, full_dm = rearrange_data(labels, series, full_dm)
     k = len(set(labels))
     location = "results/CBF/clustering/" + str(start_index) + "/" + method + "/"
-    file_Name_spec = location + "spectral.csv"
+    file_Name_spec = location + "full_dtw_ari_800.csv"
     file_Name_agglo = location + "agglo.csv"
 
     while True:
@@ -129,6 +129,7 @@ def cluster_stream(labels, series, start_index, skip, method, rank=15, iteration
                 save_index = saveNorm(normDTWAgglo, normApproxAgglo, results_ari_agglo, save_index)
                 print("Spectral", "Iteration " + str(index), "DTW ARI:", normDTWSpec)
                 print("Spectral", "Iteration " + str(index), "Approx ARI:", normApproxSpec)
+                print(len(approx.rows))
                 # print("Agglomerative", "Iteration " + str(index), "DTW ARI:", normDTWAgglo)
                 # print("Agglomerative", "Iteration " + str(index), "Approx ARI:", normApproxAgglo)
         np.savetxt(file_Name_spec,results_ari_spec, delimiter=',')
@@ -137,9 +138,11 @@ def cluster_stream(labels, series, start_index, skip, method, rank=15, iteration
             break
 
 cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method1")
-cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method1")
+cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method2")
 cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method3")
+cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method4")
 
-cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method2")
 cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method1")
+cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method2")
 cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method3")
+cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method4")

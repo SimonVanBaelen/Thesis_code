@@ -2,6 +2,7 @@ from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
 from src.aca import ACA
 import numpy as np
+import random as rnd
 
 # FacesUCR, FaceAll
 names = ["CBF"]
@@ -20,25 +21,29 @@ args = {"window": len(series[0])-1}   # for MSM "c" parameter
 full_dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
 
 
-start_index = 500
+start_index = 400
 true_start = full_dm[range(start_index), :]
 true_start = true_start[:, range(start_index)]
 true_extended = full_dm[range(start_index), :]
 true_extended = true_extended[:, range(start_index)]
-cp_start = ClusterProblem(series[0:start_index], func_name, compare_args=args)
 
-for index in range(start_index+1, start_index+25):
-    cp_extended = ClusterProblem(series[0:index], func_name, compare_args=args)
-    approx_start = ACA(cp_start, tolerance=0.05, max_rank=20, seed=255, start_index=255)
-    approx_start.extend(series[index], full_dm, method="v4")
-    approx_extended = ACA(cp_extended, tolerance=0.05, max_rank=20, seed=255, start_index=255, restart_deltas=2, start_samples = [approx_start.sample_indices, approx_start.sample_values])
-    if index == 502:
+# 255
+for _ in range(0, 100):
+    start_i = rnd.randint(0, start_index - 1)
+    seed = rnd.randint(0, 100000000000)
+    cp_start = ClusterProblem(series[0:start_index], func_name, compare_args=args, solved_matrix=true_start)
+    approx_start = ACA(cp_start, tolerance=0.05, max_rank=20, seed=seed, start_index=start_i)
+    print("random start: ", start_i)
+    print("random seed: ", seed)
+    for index in range(start_index+1, start_index+300):
+        true = full_dm[range(index), :]
+        true = true[:, range(index)]
+        tmp = series[0:index]
+        cp_extended = ClusterProblem(tmp, func_name, compare_args=args, solved_matrix=true)
+        approx_extended = ACA(cp_extended, tolerance=0.05, max_rank=20, seed=seed, start_index=start_i, restart_deltas=2, start_samples=[approx_start.sample_indices, approx_start.sample_values])
+        approx_start.extend(series[index-1], full_dm, method="method4")
+
+
         for i in range(len(approx_start.rows)):
-            print("index extended:", index, i, approx_start.indices)
-            print("index start:", index, i, approx_extended.indices)
-            # print("index extended:", index, i, approx_extended.rows[14][approx_start.indices[15]])
-            # print("index start:", index, i, approx_start.rows[14][approx_start.indices[15]])
-            # print("row elements:", index, i, np.array_equal(approx_start.rows[i], approx_extended.rows[i]))
-            # print("deltas:", i, np.array_equal(approx_start.rows[i], approx_extended.rows[i]))
-        break
+            print(index, i, np.array_equal(approx_extended.rows[i], approx_extended.rows[i]))
 

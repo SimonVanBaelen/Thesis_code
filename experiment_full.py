@@ -78,13 +78,13 @@ def cluster_stream(labels, series, start_index, skip, method, rank=15, iteration
     full_dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
     # labels, series, full_dm = rearrange_data(labels, series, full_dm)
     k = len(set(labels))
-    file_name = "results/CBF/full/" + method + "/" + str(start_index) + "_" + "spectral_limited_rank"
+    file_name = "results/CBF/full/" + method + "/" + str(start_index) + "_" + "spectral_unlimited_rank"
 
     while True:
         true = full_dm[range(start_index), :]
         true = true[:, range(start_index)]
 
-        cp = ClusterProblem(series[0:start_index], func_name, compare_args=args)
+        cp = ClusterProblem(series[0:start_index], func_name, compare_args=args, solved_matrix=true)
         approx = ACA(cp, tolerance=0.05, max_rank=rank)
 
         l = int((len(series) - start_index) / skip)
@@ -111,21 +111,26 @@ def cluster_stream(labels, series, start_index, skip, method, rank=15, iteration
             if index % skip == 0:
                 ARI_scoreDTW, ARI_score = calculateClusters(true, approx.getApproximation(full_dm), index, labels, k)
                 relative_error = np.linalg.norm(true - approx.getApproximation(full_dm)) / index
-                print(len(results), "relative_error ", relative_error)
-                print(len(results), "Spectral", "Iteration " + str(index), "DTW ARI:", ARI_scoreDTW)
-                print(len(results), "Spectral", "Iteration " + str(index), "Approx ARI:", ARI_score)
+                print(method, start_index, len(results), "relative_error ", relative_error)
+                print(method, start_index,len(results), "Spectral", "Iteration " + str(index), "DTW ARI:", ARI_scoreDTW)
+                print(method, start_index,len(results), "Spectral", "Iteration " + str(index), "Approx ARI:", ARI_score)
                 amount_of_skeletons = len(approx.rows)+len(approx.full_dtw_rows)
+                print("skeletons: ", amount_of_skeletons)
                 amount_of_dtws = approx.get_DTW_calculations()
+                print("DTW-calculations: ", amount_of_dtws)
                 result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
                 results[len(results)-1, :, int((index - start_index) / skip)] = np.array(result)
         np.save(file_name, results)
         if len(results) > iterations:
             break
 
-cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method2")
-cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method1")
-cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method3")
+# cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method1")
+# cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method2")
+# cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method3")
+cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method4")
+cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=20, iterations=100, method="method4")
+# cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method1")
+# cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method2")
+# cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method3")
+# cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method4")
 
-cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method2")
-cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method1")
-cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method3")

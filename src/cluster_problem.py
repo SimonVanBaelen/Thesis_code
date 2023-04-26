@@ -65,8 +65,14 @@ class ClusterProblem:
                 self.matrix[:, row_index] = row
         return self.matrix[row_index, :]
 
-    def add_ts(self, ts):
-        self.series = np.vstack([self.series,[ts]])
-        self.matrix = np.append(self.matrix, [np.full(len(self.matrix), np.nan)],0)
-        self.matrix = np.append(self.matrix, np.transpose([np.full(len(self.matrix), np.nan)]),1)
+    def add_ts(self, ts, dm=None):
+        self.series = np.vstack([self.series, [ts]])
+        self.matrix = np.append(self.matrix, [np.full(len(self.matrix), np.nan)], 0)
+        self.matrix = np.append(self.matrix, np.transpose([np.full(len(self.matrix), np.nan)]), 1)
 
+        if not dm is None:
+            solved_tmp = dm[:,self.size()-1]
+            solved_row = solved_tmp[range(self.size()-1)]
+            solved_column = solved_tmp[range(self.size())]
+            self.solved_matrix = np.append(self.solved_matrix, [solved_row], 0)
+            self.solved_matrix = np.append(self.solved_matrix, np.transpose([solved_column]), 1)
