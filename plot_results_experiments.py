@@ -1,3 +1,4 @@
+import pandas as pd
 from sklearn.cluster import AgglomerativeClustering, SpectralClustering, KMeans
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from src.cluster_problem import ClusterProblem
@@ -6,6 +7,7 @@ from src.aca import ACA
 from dtaidistance import dtw, clustering
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from numpy.linalg import norm
 
@@ -154,7 +156,7 @@ def plot_mean_all_ari(all_ari_scores, dtw_file_name, labels):
     plt.show()
 
 
-def full_plot_all_methods(filenames, dtw_file_name):
+def full_plot_all_methods(filenames, method_names, dtw_file_name):
     amount_of_ts = np.load(filenames[0])[0,0,:]
     amount_of_skeletons = []
     relative_error = []
@@ -168,8 +170,26 @@ def full_plot_all_methods(filenames, dtw_file_name):
         all_ari_scores.append(all_data[:,3,:])
         all_dtw_calculations.append(all_data[:,4,:])
 
-    plot_time_complexity(all_dtw_calculations, amount_of_ts)
-    plot_mean_all_ari(all_ari_scores, dtw_file_name, amount_of_ts)
+    dfs = []
+    methods = method_names
+    indices = range(400,900,25)
+    for i in range(len(all_ari_scores)):
+        dfs.append(pd.DataFrame(all_ari_scores[i], columns=list(indices)).assign(Method=methods[i]))
+    cdf = pd.concat(dfs)  # CONCATENATE
+    mdf = pd.melt(cdf, id_vars=['Method'], var_name=['Number'])
+    print(mdf.head())
+
+    sns.set(style="darkgrid")
+    sns.set_palette("bright")
+    ax = sns.boxplot(x="Number", y="value", hue="Method", data=mdf, flierprops=dict(marker='o', markerfacecolor='None', markersize=3,  markeredgecolor='black'))  # RUN PLOT
+    plt.show()
+    plt.cla()
+
+    sns.set(style="darkgrid")
+    sns.set_palette("bright")
+    ax = sns.boxplot(x="Number", y="value", hue="Method", data=mdf, flierprops=dict(marker='o', markerfacecolor='None', markersize=3,  markeredgecolor='black'))  # RUN PLOT
+    plt.show()
+    plt.cla()
 
 
 def full_plot_all(filenames):
@@ -182,32 +202,18 @@ def full_plot_all(filenames):
     plt_error_ari(ae_error, ae_ari)
 
 dtw_ari_filename1 = "results/CBF/full/full_dtw_ari_400.csv"
-dtw_ari_filename2 = "results/CBF/full/full_dtw_ari_800.csv"
-filename1 = "results/CBF/full/method1/400_spectral_limited_rank.npy"
-filename2 = "results/CBF/full/method2/400_spectral_limited_rank.npy"
-filename3 = "results/CBF/full/method3/400_spectral_limited_rank.npy"
-filename4 = "results/CBF/full/method4/400_spectral_limited_rank.npy"
-# filename5 = "results/CBF/full/method1/800_spectral_limited_rank.npy"
-# filename6 = "results/CBF/full/method2/800_spectral_limited_rank.npy"
-# filename7 = "results/CBF/full/method3/800_spectral_limited_rank.npy"
-# filename8 = "results/CBF/full/method4/800_spectral_limited_rank.npy"
-# full_plot_of_method(filename1, "methode 1", dtw_ari_filename1)
-# full_plot_of_method(filename2, "methode 2",dtw_ari_filename1)
-# full_plot_of_method(filename3, "methode 3",dtw_ari_filename1)
-# full_plot_of_method(filename4, "methode 4",dtw_ari_filename1)
-# full_plot_of_method(filename5, "methode 1",dtw_ari_filename2)
-# full_plot_of_method(filename6, "methode 2",dtw_ari_filename2)
-# full_plot_of_method(filename7, "methode 3",dtw_ari_filename2)
-# full_plot_of_method(filename8, "methode 4",dtw_ari_filename2)
-filename5 = "results/CBF/full/method1/400_spectral_unlimited_rank.npy"
-filename6 = "results/CBF/full/method2/400_spectral_unlimited_rank.npy"
-filename7 = "results/CBF/full/method3/400_spectral_unlimited_rank.npy"
-filename8 = "results/CBF/full/method4/400_spectral_unlimited_rank.npy"
+filename1 = "results/CBF/full/400_method1_spectral_unlimited_rank.npy"
+filename2 = "results/CBF/full/400_method2_spectral_unlimited_rank.npy"
+filename3 = "results/CBF/full/400_method3_spectral_unlimited_rank.npy"
+filename4 = "results/CBF/full/400_method4_spectral_unlimited_rank.npy"
+filename5 = "results/CBF/full/400_method5_spectral_unlimited_rank.npy"
 
-names1 = [filename1, filename2, filename3, filename4]
-names2 = [filename5, filename6, filename7, filename8]
+names = [filename1, filename2, filename3, filename4, filename5]
+method_names = ["Extend skeletons", "Add skeletons", "Reevaluate pivots", "Extend matrix", "Update prev approximation"]
+full_plot_all_methods([names[0]], [method_names[0]], dtw_ari_filename1)
+full_plot_all_methods([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
+full_plot_all_methods([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
+full_plot_all_methods(names, method_names, dtw_ari_filename1)
 
-full_plot_all_methods(names1, dtw_ari_filename1)
-full_plot_all_methods(names2, dtw_ari_filename1)
 # full_plot_all_methods(names2)
 # full_plot_all(names1+names2)

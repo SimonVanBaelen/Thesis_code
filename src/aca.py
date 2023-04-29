@@ -97,11 +97,14 @@ class ACA:
         return pivot_index
 
 
-    def aca_symmetric_body(self, iters_no_improvement=100, new_run=True):
+    def aca_symmetric_body(self, iters_no_improvement=100, new_run=True, m5=False):
         m = len(self.rows)
         best_m = len(self.rows)
         current_aca_state = copy.deepcopy(self.ACA_states[-1])
         pivot_index = self.choose_starting_pivot(new_run, current_state=current_aca_state)
+        if m5:
+            current_aca_state["stopcrit"] = False
+
         while m < self.max_rank and not current_aca_state["stopcrit"]:
             current_aca_state = copy.deepcopy(self.ACA_states[-1])
             # Calculate the current approximation for row of pivot
@@ -178,8 +181,6 @@ class ACA:
             if not self.restart_with_prev_pivots:
                 pivot_index = self.choose_new_pivot(new_row, current_aca_state)
                 current_aca_state["prev_pivot"] = pivot_index
-                if (len(self.rows) == 15 and self.cp.size() == 419):
-                    print(pivot_index)
             else:
                 try:
                     pivot_index = self.start_indices[m]
@@ -203,7 +204,7 @@ class ACA:
     def get_current_error(self):
         pass
 
-    def getApproximation(self, dm):
+    def getApproximation(self, dm=None):
         results = self.calc_symmetric_matrix_approx(self.rows, self.deltas, self.current_rank)
         if not dm is None:
             for i in self.full_dtw_rows:
@@ -223,7 +224,7 @@ class ACA:
         return result
 
 
-    def generate_samples_student_distribution(self, error_margin=0.01):
+    def generate_samples_student_distribution(self, error_margin=0.02):
         amount_sampled = 0
         t = 3.39
         tolerance = np.infty
@@ -271,23 +272,31 @@ class ACA:
             self.max_rank += 1
         self.cp.add_ts(ts, dm)
         if method == "method1":
-            self.add_series_using_dm()
-        elif method == "method2":
             self.extend_prior_rows(ts, dm)
-        elif method == "method3":
+        elif method == "method2":
             self.extend_prior_rows(ts, dm)
             self.add_extra_samples()
             prev_rank = len(self.rows)
-            self.aca_symmetric_body(new_run=False)
+            self.current_rank = self.aca_symmetric_body(new_run=False)
             new_rows = len(self.rows) - prev_rank
-            self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row
-        elif method == "method4":
+            self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
+        elif method == "method3":
             self.extend_and_remove_prior_rows(dm)
             self.add_extra_samples()
             prev_rank = len(self.rows)
-            self.aca_symmetric_body(new_run=False)
+            self.current_rank = self.aca_symmetric_body(new_run=False)
             new_rows = len(self.rows) - prev_rank
-            self.dtw_calculations += new_rows*self.cp.size()
+            self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
+        elif method == "method4":
+            self.add_series_using_dm()
+        elif method == "method5":
+            self.extend_prior_rows(ts, dm)
+            prev_rank = len(self.rows)
+            self.current_rank = self.aca_symmetric_body(new_run=False, m5=True)
+            new_rows = len(self.rows) - prev_rank
+            self.dtw_calculations += new_rows * self.cp.size() + prev_rank
+
+
 
 
     def add_series_using_dm(self):
@@ -319,7 +328,7 @@ class ACA:
             self.dtw_calculations += 1
             self.rows[i] = np.append(self.rows[i], [new_value])
             pivot = self.choose_new_pivot(self.rows[i],  self.ACA_states[i])
-            if pivot == self.cp.size()-1:
+            if not pivot == self.indices[i]:
                 self.rows = self.rows[:i]
                 self.deltas = self.deltas[:i]
                 self.indices = self.indices[:i]
@@ -362,7 +371,6 @@ class ACA:
             if m > 0:
                 # Update stopcriterium
                 remaining_average = np.average(np.square(self.ACA_states[m]["sample_values"]))
-
                 self.ACA_states[m]["stopcrit"] = (sqrt(remaining_average) < self.ACA_states[m]["max allowed relative error"])
                 self.ACA_states[m]["best remaining average"] = remaining_average
 
