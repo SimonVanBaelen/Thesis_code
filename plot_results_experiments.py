@@ -156,7 +156,55 @@ def plot_mean_all_ari(all_ari_scores, dtw_file_name, labels):
     plt.show()
 
 
-def full_plot_all_methods(filenames, method_names, dtw_file_name):
+def plot_box_plots(data, title, labels, method_names,full_dtw_ari=None):
+    df = []
+    methods = method_names
+    indices = range(400, 900, 25)
+    for i in range(len(data)):
+        df.append(pd.DataFrame(data[i], columns=list(indices)).assign(Methode=methods[i]))
+
+    df = pd.concat(df)  # CONCATENATE
+    df = pd.melt(df, id_vars=['Methode'], var_name=['Number'])
+    sns.set_palette("deep")
+    sns.set_style("darkgrid", {"grid.color": ".6", "grid.linestyle": ":"})
+    # background_color = "aliceblue"
+    ax = sns.boxplot(x="Number", y="value", hue="Methode", data=df,
+                     flierprops=dict(marker='o', markerfacecolor='None', markersize=3, markeredgecolor='black'),
+                     showfliers=False)  # RUN PLOT
+    ax.set(xlabel=labels[0], ylabel=labels[1])
+    ax.set_title(title)
+
+    if not full_dtw_ari is None:
+        sns.lineplot(full_dtw_ari, color="r", label="Volledige DTW afstandslatrix", linewidth=2)
+
+
+def plot_two_line_plots(data1, data2, title, labels, method_names, ax=None):
+    # fig, ax = plt.subplots(2,3)
+    if ax is None:
+        axis = plt
+    else:
+        axis = ax
+
+    colors = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
+    for i in range(len(data1)):
+        mean_data = []
+        indices = range(400, 900, 25)
+        for j in range(len(data1[0][0,:])):
+            mean_data.append(np.median(data2[i][:,j])/np.median(data1[i][:,j]))
+        axis.plot(indices, mean_data, color=colors[i], label=method_names[i], linewidth=2)
+
+    axis.legend(loc="lower left")
+    if not ax is None:
+        axis.set_xlabel(labels[0])
+        axis.set_ylabel(labels[1])
+        axis.set_title(title)
+    else:
+        axis.xlabel(labels[0])
+        axis.ylabel(labels[1])
+        axis.title(title)
+
+
+def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
     amount_of_ts = np.load(filenames[0])[0,0,:]
     amount_of_skeletons = []
     relative_error = []
@@ -166,31 +214,33 @@ def full_plot_all_methods(filenames, method_names, dtw_file_name):
     for filename in filenames:
         all_data = np.load(filename)
         amount_of_skeletons.append(all_data[:,1,:])
-        relative_error = np.append(relative_error, all_data[:,2,:])
+        relative_error.append(all_data[:,2,:])
         all_ari_scores.append(all_data[:,3,:])
         all_dtw_calculations.append(all_data[:,4,:])
 
-    dfs = []
-    methods = method_names
-    indices = range(400,900,25)
-    for i in range(len(all_ari_scores)):
-        dfs.append(pd.DataFrame(all_ari_scores[i], columns=list(indices)).assign(Method=methods[i]))
-    cdf = pd.concat(dfs)  # CONCATENATE
-    mdf = pd.melt(cdf, id_vars=['Method'], var_name=['Number'])
-    print(mdf.head())
+    full_dtw_ari = np.loadtxt(dtw_file_name, delimiter=",")
+    title1 = "Kwaliteit clustering bij gebruik verschillende methodes met homogene labels"
+    title2 = "Gemiddelde relatieve benaderingsfout bij gebruik verschillende methodes met homogene labels"
+    title3 = "Tijdscomplexiteit van verschillende methodes"
+    title4 = "Ruimtecomplexiteit van verschillende methodes"
 
-    sns.set(style="darkgrid")
-    sns.set_palette("bright")
-    ax = sns.boxplot(x="Number", y="value", hue="Method", data=mdf, flierprops=dict(marker='o', markerfacecolor='None', markersize=3,  markeredgecolor='black'))  # RUN PLOT
+    labels1 = ["Aantal tijdsreeksen", "ARI-score"]
+    labels2 = ["Aantal tijdsreeksen", "Relatieve benaderingsfout"]
+    labels3 = ["Aantal tijdsreeksen", "Relatieve fout gedeeld door aantal DTW-berekeningen"]
+    labels4 = ["Aantal tijdsreeksen", "Relatieve fout gedeeld door aantal skeletten"]
+    plot_box_plots(all_ari_scores, title1, labels1, method_names, full_dtw_ari)
     plt.show()
     plt.cla()
 
-    sns.set(style="darkgrid")
-    sns.set_palette("bright")
-    ax = sns.boxplot(x="Number", y="value", hue="Method", data=mdf, flierprops=dict(marker='o', markerfacecolor='None', markersize=3,  markeredgecolor='black'))  # RUN PLOT
+    plot_box_plots(relative_error, title2, labels2, method_names)
     plt.show()
     plt.cla()
 
+    fig, ax = plt.subplots(1,2)
+    plot_two_line_plots(all_dtw_calculations, relative_error, title3, labels3, method_names, ax[0])
+    plot_two_line_plots(amount_of_skeletons, relative_error, title4, labels4, method_names, ax[1])
+    plt.show()
+    plt.cla()
 
 def full_plot_all(filenames):
     ae_ari = np.array([])
@@ -201,19 +251,15 @@ def full_plot_all(filenames):
         ae_error = np.append(ae_error, all_data[:, 2, :])
     plt_error_ari(ae_error, ae_ari)
 
-dtw_ari_filename1 = "results/CBF/full/full_dtw_ari_400.csv"
-filename1 = "results/CBF/full/400_method1_spectral_unlimited_rank.npy"
-filename2 = "results/CBF/full/400_method2_spectral_unlimited_rank.npy"
-filename3 = "results/CBF/full/400_method3_spectral_unlimited_rank.npy"
-filename4 = "results/CBF/full/400_method4_spectral_unlimited_rank.npy"
-filename5 = "results/CBF/full/400_method5_spectral_unlimited_rank.npy"
+dtw_ari_filename1 = "results/CBF/full_dtw_ari_400.csv"
+filename1 = "results/CBF/combined_full/method1_full.npy"
+filename2 = "results/CBF/combined_full/method2_full.npy"
+filename3 = "results/CBF/combined_full/method3_full.npy"
+filename4 = "results/CBF/combined_full/method4_full.npy"
+filename5 = "results/CBF/combined_full/method5_full.npy"
 
 names = [filename1, filename2, filename3, filename4, filename5]
-method_names = ["Extend skeletons", "Add skeletons", "Reevaluate pivots", "Extend matrix", "Update prev approximation"]
-full_plot_all_methods([names[0]], [method_names[0]], dtw_ari_filename1)
-full_plot_all_methods([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
-full_plot_all_methods([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
-full_plot_all_methods(names, method_names, dtw_ari_filename1)
-
-# full_plot_all_methods(names2)
-# full_plot_all(names1+names2)
+method_names = ["extend skeletons", "adaptive add skeletons", "reevaluate pivots", "extend matrix", "non-adaptive add skeleton"]
+full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
+full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
+full_plot_all_methods_seperate(names, method_names, dtw_ari_filename1)

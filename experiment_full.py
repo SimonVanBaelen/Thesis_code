@@ -1,8 +1,8 @@
 import copy
 
 import pandas as pd
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering, KMeans
-from sklearn.metrics import adjusted_rand_score, confusion_matrix
+from sklearn.cluster import SpectralClustering
+from sklearn.metrics import adjusted_rand_score
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
 from src.aca import ACA
@@ -110,8 +110,9 @@ def cluster_stream(labels, series, start_index, skip, methods, rank=15, iteratio
     # labels, series, full_dm = rearrange_data(labels, series, full_dm)
     k = len(set(labels))
     file_names = []
+    seed_name = rn.randint(0,99999)
     for method in methods:
-        file_names.append("results/CBF/full/" + str(start_index) + "_" + method + "_spectral_unlimited_rank")
+        file_names.append("results/CBF_" + str(start_index) + "_" + method + "_spectral_unlimited_rank" + str(seed_name))
 
     while True:
         true = full_dm[range(start_index), :]
@@ -146,7 +147,7 @@ def cluster_stream(labels, series, start_index, skip, methods, rank=15, iteratio
 methods = ["method1", "method2", "method3", "method4", "method5"]
 start = 400
 skip = 25
-cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations=100)
+cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations=1000)
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method2")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method3")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method4")

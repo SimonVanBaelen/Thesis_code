@@ -36,10 +36,11 @@ def plot_distribution_distance_of_labels(labels, distance_matrix):
             axes[i, j].set_title("Afstand tussen label " + str(int(l1)) + " en label " + str(int(l2)))
             axes[i, j].set_xlim([0, 12])
             axes[i, j].set_ylim([0, 4500])
-            # axes[i, j].xlabel("Afstand")
-            # axes[i, j].ylabel("Aantal")
+            axes[i, j].set(xlabel="", ylabel="")
             if i == j:
                 axes[i, j].set_facecolor("powderblue")
+    fig.supxlabel('Afstand tussen tijdsreeksen')
+    fig.supylabel('Aantal tijdsreeksen')
     plt.show()
     plt.cla()
 

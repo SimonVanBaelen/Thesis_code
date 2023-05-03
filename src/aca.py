@@ -281,9 +281,9 @@ class ACA:
             new_rows = len(self.rows) - prev_rank
             self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
         elif method == "method3":
+            prev_rank = len(self.rows)
             self.extend_and_remove_prior_rows(dm)
             self.add_extra_samples()
-            prev_rank = len(self.rows)
             self.current_rank = self.aca_symmetric_body(new_run=False)
             new_rows = len(self.rows) - prev_rank
             self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
