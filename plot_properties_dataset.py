@@ -1,4 +1,6 @@
 import pandas as pd
+from dtaidistance import dtw
+from scipy.stats import stats
 
 from src.data_loader import load_timeseries_from_tsv
 import seaborn as sns
@@ -70,5 +72,34 @@ def plot_label_distribution(series, labels, distance_matrix):
     plot_evolution_of_distribution_of_labels(labels)
     # plot_distribution_distance_of_labels(labels, similarity_matrix, "gelijkheid", max=300)
 
+def plot_DTW_of_TimeSeries_example():
+    fig, ax = plt.subplots(nrows=1, ncols=3)
+    s1 = stats.zscore(np.array([0,0,0,-1,2,3,4,3,5,-1]))
+    s2 = stats.zscore(np.array([-1,2,3,4,3,5,-1]))
+    s3 = stats.zscore(np.array([0,0,-1,2,3,4,3,5,-1]))
+    # path = dtw.warping_path(s1, s2)
+    ax[0].set_xlabel('t')
+    ax[1].set_xlabel('t')
+    ax[2].set_xlabel('t')
+    ax[0].set_title('tijdsreeks 1')
+    ax[1].set_title('tijdsreeks 2')
+    ax[2].set_title('tijdsreeks 3')
+    dtw12 = dtw.distance(s1, s2)
+    dtw32 = dtw.distance(s3, s2)
+    dtw13 = dtw.distance(s1, s3)
+    x_title2 = str(dtw12) + " =< " + str(dtw13) + " + " + str(dtw32) + " = " + str(dtw13+dtw32)
+    print(x_title2)
+    ax[0].plot(range(len(s1)), s1, linewidth=3)
+    ax[1].plot(range(len(s2)), s2, linewidth=3)
+    ax[2].plot(range(len(s3)), s3, linewidth=3)
+    #
+    # dtwvis.plot_warping(s1, s2, path, fig=fig, axs=ax, filename="dtw_plot.png",
+    #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
+
+
+    # dtwvis.plot_warping(s1, s2, path, fig=fig, axs=ax[:,1], filename="dtw_plot.png",
+    #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
+
+    plt.show()
 
 plot_label_distribution(series, labels, distance_matrix)

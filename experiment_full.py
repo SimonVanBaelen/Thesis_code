@@ -31,11 +31,11 @@ def calculateClusters(true, approx, index, labels, k):
     temp_true = np.exp(- true ** 2 / (2 ** 2))
     temp_approx = np.exp(- approx ** 2 / (2 ** 2))
 
-    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='discretize', random_state=0)
+    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
     result_spec = model_spec.fit_predict(temp_true)
     norm_DTW_spectral = adjusted_rand_score(labels[0:index], result_spec)
 
-    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='discretize', random_state=0)
+    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
     result_spec = model_spec.fit_predict(temp_approx)
     norm_Approx_spectral = adjusted_rand_score(labels[0:index], result_spec)
 
@@ -147,7 +147,7 @@ def cluster_stream(labels, series, start_index, skip, methods, rank=15, iteratio
 methods = ["method1", "method2", "method3", "method4", "method5"]
 start = 400
 skip = 25
-cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations=1000)
+# cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations=1000)
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method2")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method3")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method4")
@@ -156,3 +156,7 @@ cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations
 # cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method2")
 # cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method3")
 # cluster_stream(labels_tr, series_tr, start_index=800, skip=10, rank=40, iterations=100, method="method4")
+
+# model = clustering.HierarchicalTree(dists_fun=dtw.distance_matrix_fast, dists_options={})
+# cluster_idx = model.fit(series_tr[0:9])
+# model.plot("hierarchy.png")

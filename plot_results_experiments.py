@@ -204,6 +204,47 @@ def plot_two_line_plots(data1, data2, title, labels, method_names, ax=None):
         axis.title(title)
 
 
+def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, y_lim1, y_lim2):
+    fig, ax = plt.subplots(2,3)
+    indices = range(400, 900, 25)
+    colors2 = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
+    for i in range(len(data1)):
+        mean_data1 = []
+        mean_data2 = []
+        for j in range(len(data1[0][0, :])):
+            mean_data1.append(np.median(data1[i][:, j]))
+            mean_data2.append(np.median(data2[i][:, j]))
+        x = 1 if i > 2 else 0
+        ax[x, int(i%3)].plot(indices, mean_data2, color="red", label=method_names[i], linewidth=2)
+        ax[x, int(i%3)].set_xlabel(labels[0])
+        ax[x, int(i%3)].set_ylabel(labels[1])
+        if i < len(subtitles):
+            ax[x, int(i % 3)].set_title(subtitles[i])
+        ax[x, int(i % 3)].set_ylim(y_lim2)
+        ax2 = ax[x, int(i % 3)].twinx()
+        ax2.set_ylim(y_lim1)
+        ax2.set_ylabel("Aantal skeletten")
+        ax2.plot(indices, mean_data1, color=colors2[i], label=method_names[i], linewidth=2)
+    for i in range(len(data1)):
+        mean_data1 = []
+        mean_data2 = []
+        for j in range(len(data1[0][0, :])):
+            mean_data1.append(np.median(data1[i][:, j]))
+            mean_data2.append(np.median(data2[i][:, j]))
+        ax[1,2].plot(indices, mean_data1, color=colors2[i], label=method_names[i], linewidth=2)
+    # fig.set_title(title)
+
+    # axis.legend(loc="lower left")
+    # if not ax is None:
+    #     axis.set_xlabel(labels[0])
+    #     axis.set_ylabel(labels[1])
+    #     axis.set_title(title)
+    # else:
+    #     axis.xlabel(labels[0])
+    #     axis.ylabel(labels[1])
+    #     axis.title(title)
+
+
 def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
     amount_of_ts = np.load(filenames[0])[0,0,:]
     amount_of_skeletons = []
@@ -226,19 +267,21 @@ def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
 
     labels1 = ["Aantal tijdsreeksen", "ARI-score"]
     labels2 = ["Aantal tijdsreeksen", "Relatieve benaderingsfout"]
-    labels3 = ["Aantal tijdsreeksen", "Relatieve fout gedeeld door aantal DTW-berekeningen"]
-    labels4 = ["Aantal tijdsreeksen", "Relatieve fout gedeeld door aantal skeletten"]
-    plot_box_plots(all_ari_scores, title1, labels1, method_names, full_dtw_ari)
-    plt.show()
-    plt.cla()
+    labels3 = ["Aantal tijdsreeksen", "Relatieve fout"]
+    labels4 = ["Aantal tijdsreeksen", "Relatieve fout"]
 
-    plot_box_plots(relative_error, title2, labels2, method_names)
-    plt.show()
-    plt.cla()
+    # plot_box_plots(all_ari_scores, title1, labels1, method_names, full_dtw_ari)
+    # plt.show()
+    # plt.cla()
+    #
+    # plot_box_plots(relative_error, title2, labels2, method_names)
+    # plt.show()
+    # plt.cla()
 
-    fig, ax = plt.subplots(1,2)
-    plot_two_line_plots(all_dtw_calculations, relative_error, title3, labels3, method_names, ax[0])
-    plot_two_line_plots(amount_of_skeletons, relative_error, title4, labels4, method_names, ax[1])
+    # fig, ax = plt.subplots(1,2)
+    # plot_two_line_plots(all_dtw_calculations, relative_error, title3, labels3, method_names, ax[0])
+    # plot_two_line_plots(amount_of_skeletons, relative_error, title4, labels4, method_names, ax[1])
+    plot_multiple_plots(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, y_lim1=[40,615], y_lim2=[0.1,0.35])
     plt.show()
     plt.cla()
 
@@ -260,6 +303,6 @@ filename5 = "results/CBF/combined_full/method5_full.npy"
 
 names = [filename1, filename2, filename3, filename4, filename5]
 method_names = ["extend skeletons", "adaptive add skeletons", "reevaluate pivots", "extend matrix", "non-adaptive add skeleton"]
-full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
-full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
+# full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
+# full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
 full_plot_all_methods_seperate(names, method_names, dtw_ari_filename1)
