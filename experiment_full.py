@@ -1,4 +1,5 @@
 import copy
+import sys
 
 import pandas as pd
 from sklearn.cluster import SpectralClustering
@@ -13,33 +14,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.linalg import norm
 
-# FacesUCR, FaceAll
-names = ["CBF"]
-
-name = names[0]
-path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
-labels_train, series_train = load_timeseries_from_tsv(path_train)
-
-path_test = "Data/" + name + "/" + name + "_TEST.tsv"
-labels_tr, series_tr = load_timeseries_from_tsv(path_test)
-
-func_name = "dtw"  # "msm"/"ed" other options
-args = {"window": len(series_tr[0]) - 1}  # for MSM "c" parameter
-
-
-def calculateClusters(true, approx, index, labels, k):
-    temp_true = np.exp(- true ** 2 / (2 ** 2))
-    temp_approx = np.exp(- approx ** 2 / (2 ** 2))
-
-    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
-    result_spec = model_spec.fit_predict(temp_true)
-    norm_DTW_spectral = adjusted_rand_score(labels[0:index], result_spec)
+def calculateClusters(approx, index, labels, k):
+    temp_approx = np.exp(- approx ** 2 / 8)
 
     model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
     result_spec = model_spec.fit_predict(temp_approx)
     norm_Approx_spectral = adjusted_rand_score(labels[0:index], result_spec)
 
-    return norm_DTW_spectral, norm_Approx_spectral
+    return norm_Approx_spectral
 
 
 def add_series_to_dm(true, next, dm):
@@ -69,25 +51,24 @@ def rearrange_data(labels, series, full_dm):
     return new_labels, new_series, new_dm
 
 
-def extend_approximations(approximations, methods, new_serie, full_dm):
+def extend_approximations(approximations, methods, new_serie):
     for approximation, method in zip(approximations, methods):
-        approximation.extend(new_serie, full_dm, method=method)
+        approximation.extend(new_serie, method=method)
 
 
 def print_result(new_result):
-    # TODO add all prints([index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws])
     # print("relative_error ", relative_error)
     # print("Spectral", "Iteration " + str(index), "DTW ARI:", ARI_scoreDTW)
     print("Spectral", "Iteration", new_result[0], "Approx ARI:", new_result[3])
 
 
-def update_results(approximations, results, true, full_dm, labels, k, index, start_index, skip):
-    # TODO delete all unnecessary arguments
+def update_results(approximations, results, labels, k, index, start_index, skip):
     for approx, result in zip(approximations, results):
-        ARI_scoreDTW, ARI_score = calculateClusters(true, approx.getApproximation(full_dm), index, labels, k)
-        relative_error = np.sqrt(np.average(np.square(true - approx.getApproximation(full_dm))))
+        ARI_score = calculateClusters(approx.getApproximation(), index, labels, k)
+        # relative_error = np.sqrt(np.average(np.square(true - approx.getApproximation(full_dm)))) #TODO
         amount_of_skeletons = len(approx.rows) + len(approx.full_dtw_rows)
         amount_of_dtws = approx.get_DTW_calculations()
+        relative_error = 0
         new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
         print_result(new_result)
         result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
@@ -105,19 +86,17 @@ def read_all_results(file_names, size, start_index, skip):
     return results
 
 
-def cluster_stream(labels, series, start_index, skip, methods, rank=15, iterations=100):
-    full_dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
+def do_full_experiment(labels, series, start_index, skip, methods, rank=15, iterations=100):
+    # full_dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
     # labels, series, full_dm = rearrange_data(labels, series, full_dm)
     k = len(set(labels))
     file_names = []
-    seed_name = rn.randint(0,99999)
     for method in methods:
-        file_names.append("results/CBF_" + str(start_index) + "_" + method + "_spectral_unlimited_rank" + str(seed_name))
-
+        file_names.append("results/CBF_full" + "_" + method + "_spectral_unlimited_rank")
     while True:
-        true = full_dm[range(start_index), :]
-        true = true[:, range(start_index)]
-        cp = ClusterProblem(series[0:start_index], func_name, compare_args=args, solved_matrix=true)
+        # true = full_dm[range(start_index), :]
+        # true = true[:, range(start_index)]
+        cp = ClusterProblem(series[0:start_index], func_name, compare_args=args)
         results = read_all_results(file_names, len(series), start_index, skip)
 
         # TODO add seed + start index + print them
@@ -129,25 +108,41 @@ def cluster_stream(labels, series, start_index, skip, methods, rank=15, iteratio
             approximations.append(copy.deepcopy(approximations[0]))
 
         index = start_index
-        update_results(approximations, results, true, full_dm, labels, k, index, start_index, skip)
+        update_results(approximations, results, labels, k, index, start_index, skip)
         while index < len(series) - 1:
             index += 1
+            print(len(results[0]), index)
             new_serie = series[index]
-            true = add_series_to_dm(true, index, full_dm)
-            extend_approximations(approximations, methods, new_serie, full_dm)
-
+            extend_approximations(approximations, methods, new_serie)
             if index % skip == 0:
-                update_results(approximations, results, true, full_dm, labels, k, index, start_index, skip)
+                update_results(approximations, results, labels, k, index, start_index, skip)
 
         for file_name, result in zip(file_names, results):
             np.save(file_name, result)
 
         if len(results[0]) > iterations:
             break
+
+name = "CBF" # sys.argv[1]
+path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
+labels_train, series_train = load_timeseries_from_tsv(path_train)
+
+path_test = "Data/" + name + "/" + name + "_TEST.tsv"
+labels_test, series_test = load_timeseries_from_tsv(path_test)
+
+labels = np.concatenate((labels_train, labels_test), axis=0)
+series = np.concatenate((series_train, series_test), axis=0)
+
+func_name = "dtw"  # "msm"/"ed" other options
+args = {"window": len(series) - 1}  # for MSM "c" parameter
+
 methods = ["method1", "method2", "method3", "method4", "method5"]
-start = 400
-skip = 25
-# cluster_stream(labels_tr, series_tr, start, skip, methods, rank=9000, iterations=1000)
+start = int(len(series)/2)
+skip = int(start/15)
+# skip = 25
+print("start: ", start,"Skip: ", skip)
+do_full_experiment(labels, series, start, skip, methods, rank=9000, iterations=1000)
+
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method2")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method3")
 # cluster_stream(labels_tr, series_tr, start_index=400, skip=25, rank=9000, iterations=100, method="method4")

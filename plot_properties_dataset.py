@@ -1,18 +1,28 @@
+import math
+
 import pandas as pd
 from dtaidistance import dtw
 from scipy.stats import stats
+from sklearn.cluster import SpectralClustering
+from sklearn.metrics import adjusted_rand_score
 
+from src.aca import ACA
+from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
-names = ["CBF"]
 
-name = names[0]
+name = "CBF" # sys.argv[1]
+path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
+labels_train, series_train = load_timeseries_from_tsv(path_train)
+
 path_test = "Data/" + name + "/" + name + "_TEST.tsv"
-labels, series = load_timeseries_from_tsv(path_test)
-distance_matrix = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
+labels_test, series_test = load_timeseries_from_tsv(path_test)
+
+labels = np.concatenate((labels_train, labels_test), axis=0)
+series = np.concatenate((series_train, series_test), axis=0)
 
 
 func_name = "dtw"         # "msm"/"ed" other options
@@ -101,5 +111,3 @@ def plot_DTW_of_TimeSeries_example():
     #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
 
     plt.show()
-
-plot_label_distribution(series, labels, distance_matrix)

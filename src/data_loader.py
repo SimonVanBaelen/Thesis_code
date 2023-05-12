@@ -1,6 +1,5 @@
 import numpy as np
 import logging
-from .cluster_problem import ClusterProblem
 
 """
 MATHIAS PEDE

@@ -204,13 +204,12 @@ class ACA:
     def get_current_error(self):
         pass
 
-    def getApproximation(self, dm=None):
+    def getApproximation(self):
         results = self.calc_symmetric_matrix_approx(self.rows, self.deltas, self.current_rank)
-        if not dm is None:
-            for i in self.full_dtw_rows:
-                all_dtw = np.transpose(dm[i, range(len(results))])
-                results[:,i] = all_dtw
-                results[i, :] = all_dtw
+        for i in self.full_dtw_rows:
+            all_dtw = np.transpose(self.cp.sample_row(i)) #TODO
+            results[:,i] = all_dtw
+            results[i, :] = all_dtw
         return results
 
 
@@ -267,14 +266,14 @@ class ACA:
         print(str(amount_sampled))
         return sample_indices, sample_values
 
-    def extend(self, ts, dm, method="method1"):
+    def extend(self, ts, dm=None, method="method1"):
         if self.max_rank >= self.cp.size():
             self.max_rank += 1
         self.cp.add_ts(ts, dm)
         if method == "method1":
-            self.extend_prior_rows(ts, dm)
+            self.extend_prior_rows()
         elif method == "method2":
-            self.extend_prior_rows(ts, dm)
+            self.extend_prior_rows()
             self.add_extra_samples()
             prev_rank = len(self.rows)
             self.current_rank = self.aca_symmetric_body(new_run=False)
@@ -282,7 +281,7 @@ class ACA:
             self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
         elif method == "method3":
             prev_rank = len(self.rows)
-            self.extend_and_remove_prior_rows(dm)
+            self.extend_and_remove_prior_rows()
             self.add_extra_samples()
             self.current_rank = self.aca_symmetric_body(new_run=False)
             new_rows = len(self.rows) - prev_rank
@@ -290,7 +289,7 @@ class ACA:
         elif method == "method4":
             self.add_series_using_dm()
         elif method == "method5":
-            self.extend_prior_rows(ts, dm)
+            self.extend_prior_rows()
             prev_rank = len(self.rows)
             self.current_rank = self.aca_symmetric_body(new_run=False, m5=True)
             new_rows = len(self.rows) - prev_rank
@@ -306,9 +305,9 @@ class ACA:
         self.full_dtw_rows.append(next)
         self.dtw_calculations += self.cp.size()
 
-    def extend_prior_rows(self, ts, dm):
+    def extend_prior_rows(self):
         for i in range(len(self.rows)):
-            new_value = dm[self.cp.size()-1, self.indices[i]]
+            new_value = self.cp.sample(self.cp.size()-1, self.indices[i])
             approx = 0
             for j in range(i):
                 approx += self.rows[j][self.indices[i]] * self.rows[j][-1] / self.deltas[j]
@@ -316,14 +315,12 @@ class ACA:
             self.rows[i] = np.append(self.rows[i], [new_value])
             self.dtw_calculations += 1
 
-    def extend_and_remove_prior_rows(self, dm):
+    def extend_and_remove_prior_rows(self):
         for i in range(len(self.rows)):
-            new_value = dm[self.cp.size()-1, self.indices[i]]
+            new_value = self.cp.sample(self.cp.size()-1, self.indices[i])
             approx = 0
             for j in range(i):
                 approx += self.rows[j][self.indices[i]] * self.rows[j][-1] * (1.0 / self.deltas[j])
-                # approx += self.rows[j][-1] * self.rows[j][-1] / self.deltas[j]
-            # Find new w vector
             new_value -= approx
             self.dtw_calculations += 1
             self.rows[i] = np.append(self.rows[i], [new_value])
