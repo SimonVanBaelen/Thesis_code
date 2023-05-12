@@ -9,7 +9,7 @@ from src.cluster_problem import ClusterProblem
 logger = logging.getLogger("ftsc")
 
 class ACA:
-    def __init__(self, cp: ClusterProblem, tolerance=0.05, max_rank=None, start_index=None, seed=None,
+    def __init__(self, cp: ClusterProblem, tolerance=0.05, adaptive=False, max_rank=None, start_index=None, seed=None,
                  start_indices=None, restart_deltas=None,restart_with_prev_pivots=False, start_samples=None):
         """
         Adaptive Cross Approximation for Symmetric Distance Matrices
@@ -49,6 +49,7 @@ class ACA:
         self.rows = []
         self.deltas = []
         self.indices = []
+        self.adaptive = adaptive
         ACA_state_start = {
             "best remaining average":  self.initial_average,
             "max allowed relative error": sqrt(self.initial_average) * self.tolerance,
@@ -62,6 +63,7 @@ class ACA:
             "prev_pivot": rnd.randint(0, self.cp.size() - 1)
         }
         self.ACA_states = [ACA_state_start]
+        self.current_aca_state = ACA_state_start
         self.current_rank = self.aca_symmetric_body()
         self.full_dtw_rows = []
         self.dtw_calculations = 0
@@ -100,13 +102,13 @@ class ACA:
     def aca_symmetric_body(self, iters_no_improvement=100, new_run=True, m5=False):
         m = len(self.rows)
         best_m = len(self.rows)
-        current_aca_state = copy.deepcopy(self.ACA_states[-1])
+        current_aca_state = self.get_aca_state()
         pivot_index = self.choose_starting_pivot(new_run, current_state=current_aca_state)
         if m5:
             current_aca_state["stopcrit"] = False
 
         while m < self.max_rank and not current_aca_state["stopcrit"]:
-            current_aca_state = copy.deepcopy(self.ACA_states[-1])
+            current_aca_state = self.get_aca_state()
             # Calculate the current approximation for row of pivot
             approx = np.zeros(self.cp.size())
             for i in range(m):
@@ -154,7 +156,7 @@ class ACA:
             elif m > best_m + iters_no_improvement:
                 logger.debug("No improvement for 100 ranks, current rank: " + str(m))
                 estimated_error = sqrt(current_aca_state["best remaining average"]) / sqrt(self.initial_average)
-                self.ACA_states.append(current_aca_state)
+                self.end_aca(current_aca_state)
                 return best_m
 
             # Delete the samples on the pivot row from the restartable samples
@@ -186,7 +188,7 @@ class ACA:
                     pivot_index = self.start_indices[m]
                     current_aca_state["prev_pivot"] = pivot_index
                 except:
-                    self.ACA_states.append(current_aca_state)
+                    self.end_aca(current_aca_state)
                     return best_m
 
             m += 1
@@ -197,8 +199,10 @@ class ACA:
             else:
                 logger.debug("Max rank " + str(self.max_rank) + "achieved, Approximated error: " + str(estimated_error))
 
-            self.ACA_states.append(current_aca_state)
-
+            self.end_aca(current_aca_state)
+            if m5:
+                return best_m
+        self.end_aca(current_aca_state)
         return best_m
 
     def get_current_error(self):
@@ -266,37 +270,35 @@ class ACA:
         print(str(amount_sampled))
         return sample_indices, sample_values
 
-    def extend(self, ts, dm=None, method="method1"):
+    def extend(self, ts, method="method1", solved_matrix=None):
         if self.max_rank >= self.cp.size():
             self.max_rank += 1
-        self.cp.add_ts(ts, dm)
+        self.cp.add_ts(ts, sm=solved_matrix) #TODO
         if method == "method1":
-            self.extend_prior_rows()
+            self.extend_prior_rows() #TODO
         elif method == "method2":
             self.extend_prior_rows()
-            self.add_extra_samples()
+            self.add_extra_samples() #TODO
             prev_rank = len(self.rows)
             self.current_rank = self.aca_symmetric_body(new_run=False)
             new_rows = len(self.rows) - prev_rank
             self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
         elif method == "method3":
             prev_rank = len(self.rows)
-            self.extend_and_remove_prior_rows()
+            self.extend_and_remove_prior_rows() #TODO
+            removed = abs(len(self.rows) - prev_rank)
             self.add_extra_samples()
             self.current_rank = self.aca_symmetric_body(new_run=False)
-            new_rows = len(self.rows) - prev_rank
-            self.dtw_calculations += new_rows*self.cp.size() + self.amount_of_samples_per_row + prev_rank
+            new_calculated = abs(len(self.rows) - removed)
+            self.dtw_calculations += new_calculated*self.cp.size() + self.amount_of_samples_per_row + prev_rank
         elif method == "method4":
-            self.add_series_using_dm()
+            self.add_series_using_dm() #TODO
         elif method == "method5":
             self.extend_prior_rows()
             prev_rank = len(self.rows)
-            self.current_rank = self.aca_symmetric_body(new_run=False, m5=True)
+            self.current_rank = self.aca_symmetric_body(new_run=False, m5=True) #TODO
             new_rows = len(self.rows) - prev_rank
             self.dtw_calculations += new_rows * self.cp.size() + prev_rank
-
-
-
 
     def add_series_using_dm(self):
         next = self.cp.size()-1
@@ -352,38 +354,63 @@ class ACA:
 
         self.sample_indices = np.concatenate((self.sample_indices, new_sample_indices))
         self.sample_values = np.concatenate((self.sample_values, new_sample_values))
-
         # update all ACA states and reevaluate the new samples
-        for m in range(0, len(self.ACA_states)):
+        if self.adaptive:
+            states_to_update = self.ACA_states
+        else:
+            states_to_update = [self.ACA_states[0], self.current_aca_state]
+        self.update_previous_states(states_to_update, new_sample_indices, new_sample_values)
 
-            # reevaluate the new samples
+
+    def get_aca_state(self):
+        if self.adaptive:
+            return copy.deepcopy(self.ACA_states[-1])
+        else:
+            return self.current_aca_state
+
+    def end_aca(self, current_aca_state):
+        if self.adaptive:
+            self.ACA_states.append(current_aca_state)
+
+    def update_previous_states(self, states_to_update, new_sample_indices, new_sample_values):
+        for m in range(0, len(states_to_update)):
             if m > 0:
                 for j in range(len(new_sample_indices)):
-                    x = new_sample_indices[j, 0]
-                    y = new_sample_indices[j, 1]
-                    new_sample_values[j] = new_sample_values[j] - self.rows[m-1][y] * self.rows[m-1][x]/ self.deltas[m-1]
+                    if self.adaptive:
+                        x = new_sample_indices[j, 0]
+                        y = new_sample_indices[j, 1]
+                        new_sample_values[j] = new_sample_values[j] - self.rows[m - 1][y] * self.rows[m - 1][x] / \
+                                               self.deltas[m - 1]
+                    else:
+                        for row, delta in zip(self.rows, self.deltas):
+                            x = new_sample_indices[j, 0]
+                            y = new_sample_indices[j, 1]
+                            new_sample_values[j] = new_sample_values[j] - row[y] * row[x] / delta
 
-            self.ACA_states[m]["sample_values"] = np.concatenate((self.ACA_states[m]["sample_values"], new_sample_values))
-
-            if m > 0:
+                # states_to_update[m]["sample_values"] = np.concatenate((states_to_update[m]["sample_values"], new_sample_values))
                 # Update stopcriterium
-                remaining_average = np.average(np.square(self.ACA_states[m]["sample_values"]))
-                self.ACA_states[m]["stopcrit"] = (sqrt(remaining_average) < self.ACA_states[m]["max allowed relative error"])
-                self.ACA_states[m]["best remaining average"] = remaining_average
+                remaining_average = np.average(np.square(states_to_update[m]["sample_values"]))
+                states_to_update[m]["stopcrit"] = (
+                            sqrt(remaining_average) < states_to_update[m]["max allowed relative error"])
+                states_to_update[m]["best remaining average"] = remaining_average
 
                 # Delete the samples on the pivot row from the restartable samples of the state
-                pivot_indices_in_row_of_samples = np.where(self.sample_indices[:, 0] == self.indices[m-1])[0]
-                pivot_indices_in_col_of_samples = np.where(self.sample_indices[:, 1] == self.indices[m-1])[0]
-                pivot_indices_in_samples = np.concatenate((pivot_indices_in_row_of_samples, pivot_indices_in_col_of_samples))
-                self.ACA_states[m]["deleted indices"] = np.concatenate((self.ACA_states[m]["deleted indices"], pivot_indices_in_samples), axis=0)
-                self.ACA_states[m]["restartable samples"] = np.delete(self.ACA_states[m]["sample_values"], self.ACA_states[m]["deleted indices"], axis=0)
-                self.ACA_states[m]["restartable indices"] = np.delete(self.sample_indices, self.ACA_states[m]["deleted indices"], axis=0)
+                pivot_indices_in_row_of_samples = np.where(self.sample_indices[:, 0] == self.indices[m - 1])[0]
+                pivot_indices_in_col_of_samples = np.where(self.sample_indices[:, 1] == self.indices[m - 1])[0]
+                pivot_indices_in_samples = np.concatenate(
+                    (pivot_indices_in_row_of_samples, pivot_indices_in_col_of_samples))
+                states_to_update[m]["deleted indices"] = np.concatenate(
+                    (states_to_update[m]["deleted indices"], pivot_indices_in_samples), axis=0)
+                states_to_update[m]["restartable samples"] = np.delete(states_to_update[m]["sample_values"],
+                                                                       states_to_update[m]["deleted indices"], axis=0)
+                states_to_update[m]["restartable indices"] = np.delete(self.sample_indices,
+                                                                       states_to_update[m]["deleted indices"], axis=0)
 
-                self.ACA_states[m]["max residu"] = np.max(np.abs(self.ACA_states[m]["restartable samples"]))
+                states_to_update[m]["max residu"] = np.max(np.abs(states_to_update[m]["restartable samples"]))
             else:
                 self.initial_average = np.average(np.square(self.sample_values))
-                self.ACA_states[m]["best remaining average"] = self.initial_average
-                self.ACA_states[m]["max allowed relative error"] = sqrt(self.initial_average) * self.tolerance
-                self.ACA_states[m]["restartable samples"] = np.copy(self.sample_values)
-                self.ACA_states[m]["restartable indices"] = np.copy(self.sample_indices)
-                self.ACA_states[m]["sample_values"] = np.copy(self.sample_values)
+                states_to_update[m]["best remaining average"] = self.initial_average
+                states_to_update[m]["max allowed relative error"] = sqrt(self.initial_average) * self.tolerance
+                states_to_update[m]["restartable samples"] = np.copy(self.sample_values)
+                states_to_update[m]["restartable indices"] = np.copy(self.sample_indices)
+                states_to_update[m]["sample_values"] = np.copy(self.sample_values)
