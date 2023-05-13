@@ -107,13 +107,12 @@ def do_full_experiment(series, labels, dm, start_index, skip, methods, cluster_a
         print("STARTING NEW APPROX: it =", len(results[0]), "start index approx =", start_index_approx, "seed =", seed)
         approximations = [ACA(cp, tolerance=0.05, max_rank=rank, start_index=start_index_approx, seed=seed)]
         for i in range(1, len(methods)):
-            approximations.append(ACA(copy.deepcopy(cp), adaptive=methods[i]=="method3", tolerance=0.05, max_rank=rank, start_index=start_index_approx, seed=seed))
+            approximations.append(ACA(copy.deepcopy(cp), tolerance=0.05, max_rank=rank, start_index=start_index_approx, seed=seed))
 
         index = start_index
         update_results(approximations, results, labels, active_dm, cluster_algo, k, index, start_index, skip)
         while index < len(series) - 1:
             index += 1
-            print(index)
             if dm is not None:
                 active_dm = dm[range(index), :]
                 active_dm = active_dm[:, range(index)]
@@ -154,6 +153,7 @@ series, labels = load_data(name)
 true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
 series, labels, true_dm = modify_data(series, labels, true_dm)
 methods = ["method1", "method2", "method3", "method4", "method5"]
+# methods = ["method2", "method3"]
 start = int(len(series)/2)
 skip = int((len(series)-start)/15)
 print("start: ", start,"Skip: ", skip)
