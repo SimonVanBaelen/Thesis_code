@@ -65,10 +65,10 @@ class ClusterProblem:
                 self.matrix[:, row_index] = row
         return self.matrix[row_index, :]
 
-    def add_ts(self, ts, sm=None):
-        self.series = np.vstack([self.series, [ts]])
-        self.matrix = np.append(self.matrix, [np.full(len(self.matrix), np.nan)], 0)
-        self.matrix = np.append(self.matrix, np.transpose([np.full(len(self.matrix), np.nan)]), 1)
+    def add_timeseries(self, timeseries, sm=None):
+        self.series = np.vstack([self.series, timeseries])
+        self.matrix = np.append(self.matrix, np.full((len(self.matrix), len(timeseries)), np.nan), 1)
+        self.matrix = np.append(self.matrix, np.transpose(np.full((len(self.matrix) + len(timeseries), len(timeseries)), np.nan)), 0)
 
         if not sm is None:
             self.solved_matrix = sm

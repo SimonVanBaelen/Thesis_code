@@ -156,10 +156,9 @@ def plot_mean_all_ari(all_ari_scores, dtw_file_name, labels):
     plt.show()
 
 
-def plot_box_plots(data, title, labels, method_names,full_dtw_ari=None):
+def plot_box_plots(data, title, labels, method_names, indices, full_dtw_ari=None):
     df = []
     methods = method_names
-    indices = range(400, 900, 25)
     for i in range(len(data)):
         df.append(pd.DataFrame(data[i], columns=list(indices)).assign(Methode=methods[i]))
 
@@ -178,7 +177,7 @@ def plot_box_plots(data, title, labels, method_names,full_dtw_ari=None):
         sns.lineplot(full_dtw_ari, color="r", label="Volledige DTW afstandslatrix", linewidth=2)
 
 
-def plot_two_line_plots(data1, data2, title, labels, method_names, ax=None):
+def plot_two_line_plots(data1, data2, title, labels, method_names, indices,  ax=None):
     # fig, ax = plt.subplots(2,3)
     if ax is None:
         axis = plt
@@ -188,7 +187,6 @@ def plot_two_line_plots(data1, data2, title, labels, method_names, ax=None):
     colors = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
     for i in range(len(data1)):
         mean_data = []
-        indices = range(400, 900, 25)
         for j in range(len(data1[0][0,:])):
             mean_data.append(np.median(data2[i][:,j])/np.median(data1[i][:,j]))
         axis.plot(indices, mean_data, color=colors[i], label=method_names[i], linewidth=2)
@@ -204,9 +202,8 @@ def plot_two_line_plots(data1, data2, title, labels, method_names, ax=None):
         axis.title(title)
 
 
-def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, y_lim1, y_lim2):
+def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, indices, y_lim1, y_lim2):
     fig, ax = plt.subplots(2,3)
-    indices = range(400, 900, 25)
     colors2 = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
     for i in range(len(data1)):
         mean_data1 = []
@@ -245,13 +242,13 @@ def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, y_
     #     axis.title(title)
 
 
-def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
-    amount_of_ts = np.load(filenames[0])[0,0,:]
+def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name=None):
+    indices = [int(x) for x in np.load(filenames[0])[0,0,:]]
     amount_of_skeletons = []
     relative_error = []
     all_ari_scores = []
     all_dtw_calculations = []
-
+    print(indices)
     for filename in filenames:
         all_data = np.load(filename)
         amount_of_skeletons.append(all_data[:,1,:])
@@ -259,7 +256,8 @@ def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
         all_ari_scores.append(all_data[:,3,:])
         all_dtw_calculations.append(all_data[:,4,:])
 
-    full_dtw_ari = np.loadtxt(dtw_file_name, delimiter=",")
+    if not dtw_file_name is None:
+        full_dtw_ari = np.loadtxt(dtw_file_name, delimiter=",")
     title1 = "Kwaliteit clustering bij gebruik verschillende methodes met homogene labels"
     title2 = "Gemiddelde relatieve benaderingsfout bij gebruik verschillende methodes met homogene labels"
     title3 = "Tijdscomplexiteit van verschillende methodes"
@@ -270,18 +268,16 @@ def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name):
     labels3 = ["Aantal tijdsreeksen", "Relatieve fout"]
     labels4 = ["Aantal tijdsreeksen", "Relatieve fout"]
 
-    # plot_box_plots(all_ari_scores, title1, labels1, method_names, full_dtw_ari)
+    # plot_box_plots(all_ari_scores, title1, labels1, method_names, indices)
     # plt.show()
     # plt.cla()
     #
-    # plot_box_plots(relative_error, title2, labels2, method_names)
+    # plot_box_plots(relative_error, title2, labels2, method_names, indices)
     # plt.show()
     # plt.cla()
 
-    # fig, ax = plt.subplots(1,2)
-    # plot_two_line_plots(all_dtw_calculations, relative_error, title3, labels3, method_names, ax[0])
-    # plot_two_line_plots(amount_of_skeletons, relative_error, title4, labels4, method_names, ax[1])
-    plot_multiple_plots(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, y_lim1=[40,615], y_lim2=[0.1,0.35])
+    plot_multiple_plots(all_dtw_calculations, relative_error, title3, method_names, labels3, method_names, indices, y_lim1=[0, 600000], y_lim2=[0.1, 0.35])
+    plot_multiple_plots(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
     plt.show()
     plt.cla()
 
@@ -302,7 +298,7 @@ filename4 = "results/CBF/combined_full/method4_full.npy"
 filename5 = "results/CBF/combined_full/method5_full.npy"
 
 names = [filename1, filename2, filename3, filename4, filename5]
-method_names = ["extend skeletons", "adaptive add skeletons", "reevaluate pivots", "extend matrix", "non-adaptive add skeleton"]
+method_names = ["Skelet update", "Tolerantie-gebaseerde additieve update", "Adaptieve update", "Exacte additieve update", "Maximale additieve update"]
 # full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
 # full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
-full_plot_all_methods_seperate(names, method_names, dtw_ari_filename1)
+full_plot_all_methods_seperate(names, method_names)

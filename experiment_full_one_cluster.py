@@ -117,7 +117,7 @@ def do_full_experiment(series, labels, dm, start_index, skip, methods, cluster_a
                 active_dm = dm[range(index), :]
                 active_dm = active_dm[:, range(index)]
             new_serie = series[index]
-            extend_approximations(approximations, methods, new_serie, solved_matrix=active_dm)
+            extend_approximations(approximations, methods, [new_serie], solved_matrix=active_dm)
             if index % skip == 0:
                 update_results(approximations, results, labels, active_dm, cluster_algo, k, index, start_index, skip)
 
@@ -153,7 +153,6 @@ series, labels = load_data(name)
 true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
 series, labels, true_dm = modify_data(series, labels, true_dm)
 methods = ["method1", "method2", "method3", "method4", "method5"]
-# methods = ["method2", "method3"]
 start = int(len(series)/2)
 skip = int((len(series)-start)/15)
 print("start: ", start,"Skip: ", skip)
