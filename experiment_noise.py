@@ -2,12 +2,13 @@ import copy
 import sys
 
 import pandas as pd
-from sklearn.cluster import SpectralClustering
+from sklearn.cluster import SpectralClustering, DBSCAN
 from sklearn.metrics import adjusted_rand_score
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
 from src.aca import ACA
 import random as rn
+import make_new_datasets
 from dtaidistance import dtw, clustering
 import scipy.stats as stats
 import matplotlib.pyplot as plt
@@ -34,9 +35,10 @@ def add_series_to_dm(true, next, dm):
     true[next, :] = all_dtw
     return true
 
-def extend_approximations(approximations, methods, new_series, solved_matrix=None):
+
+def extend_approximations(approximations, methods, new_serie, solved_matrix=None):
     for approximation, method in zip(approximations, methods):
-        approximation.extend(new_series, method=method, solved_matrix=solved_matrix)
+        approximation.extend(new_serie, method=method, solved_matrix=solved_matrix)
 
 
 def print_result(new_result):
@@ -76,9 +78,9 @@ def do_full_experiment(series, labels, dm, start_index, skip, methods, cluster_a
     seed_file_name = rn.randint(0,9999999999)
     for method in methods:
         if random_file:
-            file_names.append("results/CBF/batches/" + "_" + str(seed_file_name) + "_" + method + "_ " + str(skip))
+            file_names.append("results/stagnate/" + str(seed_file_name) + "_" + method + "_full")
         else:
-            file_names.append("results/CBF/batches/" + "_" + method + "_" + str(skip))
+            file_names.append("results/stagnate/" + method + "_full")
     while True:
         if dm is not None:
             active_dm = dm[range(start_index), :]
@@ -87,25 +89,22 @@ def do_full_experiment(series, labels, dm, start_index, skip, methods, cluster_a
         results = read_all_results(file_names, len(series), start_index, skip)
         start_index_approx = rn.randint(0,start_index-1)
         seed = rn.randint(0,99999999)
-        print("STARTING NEW APPROX: it =", len(results[0]), "start index approx =", start_index_approx, "seed =", seed, "skip =", skip)
+        print("STARTING NEW APPROX: it =", len(results[0]), "start index approx =", start_index_approx, "seed =", seed)
         approximations = [ACA(cp, tolerance=0.05, max_rank=rank, start_index=start_index_approx, seed=seed)]
         for i in range(1, len(methods)):
             approximations.append(ACA(copy.deepcopy(cp), tolerance=0.05, max_rank=rank, start_index=start_index_approx, seed=seed))
 
         index = start_index
         update_results(approximations, results, labels, active_dm, cluster_algo, k, index, start_index, skip)
-        new_series = []
         while index < len(series) - 1:
             index += 1
-            new_series.append(series[index])
             if dm is not None:
                 active_dm = dm[range(index), :]
                 active_dm = active_dm[:, range(index)]
+            new_serie = series[index]
+            extend_approximations(approximations, methods, [new_serie], solved_matrix=active_dm)
             if index % skip == 0:
-                extend_approximations(approximations, methods, new_series, solved_matrix=active_dm)
                 update_results(approximations, results, labels, active_dm, cluster_algo, k, index, start_index, skip)
-                new_series = []
-        extend_approximations(approximations, methods, new_series, solved_matrix=active_dm)
         update_results(approximations, results, labels, active_dm, cluster_algo, k, index, start_index, skip)
         for file_name, result in zip(file_names, results):
             np.save(file_name, result)
@@ -125,21 +124,13 @@ def load_data(name):
     series = np.concatenate((series_train, series_test), axis=0)
     return series, labels
 
-def modify_data(series, labels, true_dm, modify_name=None):
-    if modify_name == 'stagnate':
-        pass
-    elif modify_name == 'noise':
-        pass
-    elif modify_name == 'unknown_label':
-        pass
-    return series, labels, true_dm
 
 name = "CBF"
 series, labels = load_data(name)
 true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
-series, labels, true_dm = modify_data(series, labels, true_dm)
+series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm,'stagnate')
 methods = ["method1", "method2", "method3", "method4", "method5"]
-start = int(len(series)/2)
-skip = 25
+start = 400
+skip = int((len(series)-start)/10)
 print("start: ", start,"Skip: ", skip)
-do_full_experiment(series, labels, true_dm, start, skip, methods, "spectral", rank=9000, iterations=1000, random_file=False)
+do_full_experiment(series, labels, true_dm, start, skip, methods, "spectral", rank=9000, iterations=1000)

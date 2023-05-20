@@ -294,7 +294,7 @@ class ACA:
         prev_rank = len(self.rows)
         self.current_rank = self.aca_symmetric_body(new_run=False)
         new_rows = len(self.rows) - prev_rank
-        self.dtw_calculations += new_rows * self.cp.size() + self.amount_of_samples_per_row + (end_index-start_index)*len(self.rows)
+        self.dtw_calculations += new_rows * self.cp.size() + (end_index-start_index)*self.amount_of_samples_per_row
 
     def do_skeleton_update(self, start_index, end_index):
         for i in range(len(self.rows)):
@@ -307,15 +307,13 @@ class ACA:
                 new_value -= approx
                 new_values.append(new_value)
             self.rows[i] = np.append(self.rows[i], new_values)
-            self.dtw_calculations += (end_index-start_index)*len(self.rows)
+        self.dtw_calculations += (end_index-start_index)*len(self.rows)
 
     def do_maximal_additive_update(self, timeseries, start_index, end_index):
         self.do_skeleton_update(start_index, end_index)
-        prev_rank = len(self.rows)
         for _ in timeseries:
             self.current_rank = self.aca_symmetric_body(new_run=False, m5=True)
-        new_rows = len(self.rows) - prev_rank
-        self.dtw_calculations += new_rows * self.cp.size() + (end_index-start_index)*len(self.rows)
+        self.dtw_calculations += (end_index-start_index) * self.cp.size() + (end_index-start_index)*len(self.rows)
 
     def do_adaptive_update(self, start_index, end_index):
         prev_rank = len(self.rows)
@@ -323,7 +321,7 @@ class ACA:
         removed = abs(len(self.rows) - prev_rank)
         self.current_rank = self.aca_symmetric_body(new_run=False)
         new_rows = abs(len(self.rows) - removed)
-        self.dtw_calculations += new_rows * self.cp.size() + self.amount_of_samples_per_row + (end_index-start_index)*len(self.rows)
+        self.dtw_calculations += new_rows * self.cp.size() + (end_index-start_index)*(self.amount_of_samples_per_row + abs(prev_rank-removed))
 
     def extend_and_remove_prior_rows(self, start_index, end_index):
         new_sample_values, new_sample_indices = self.find_new_samples_for_ts(start_index)

@@ -15,8 +15,9 @@ def get_distance_matrix_between_labels(l1, l2, labels, dm):
     tmp = dm[indices_l1, :]
     return tmp[:, indices_l2]
 # "FiftyWords", "CBF", "FaceAll", "StarLightCurves"
-# names = ["FiftyWords", "CBF", "FaceAll", "StarLightCurves", "ECG5000", "ElectricDevices", "EthanolLevel", "ChlorineConcentration", "Wafer", "Crop"]
-names = ["CBF"]
+# names = ["FiftyWords", "CBF", "FaceAll", "ECG5000", "ElectricDevices", "EthanolLevel", "ChlorineConcentration", "Wafer", "Crop"]
+# names = ["CBF"]
+names = []
 for name in names:
     print(name)
     path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
@@ -44,9 +45,11 @@ for name in names:
         for l2 in set(labels):
             dm_between_labels = get_distance_matrix_between_labels(l1, l2, labels, distance_matrix)
             if l1 == l2:
-                same.append(np.average(dm_between_labels))
+                for v in dm_between_labels:
+                    same.append(np.average(v))
             else:
-                diff.append(np.average(dm_between_labels))
+                for v in dm_between_labels:
+                    diff.append(np.average(v))
 
 
     print("Same label:", min(same), max(same), np.average(same), np.median(same))
@@ -65,6 +68,7 @@ for name in names:
     def function1(approx, e):
         lowest = 0.0001
         a = (-e ** 2) / math.log(lowest)
+        print(a)
         return np.exp(- (approx ** 2) / a)
 
     def function2(approx, e):

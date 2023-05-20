@@ -3,6 +3,7 @@ import math
 import pandas as pd
 from dtaidistance import dtw
 from scipy.stats import stats
+import make_new_datasets
 from sklearn.cluster import SpectralClustering
 from sklearn.metrics import adjusted_rand_score
 
@@ -46,7 +47,7 @@ def plot_distribution_distance_of_labels(labels, distance_matrix):
             sns.histplot(ax=axes[i, j], data=dm_between_labels.flatten())
             axes[i, j].axvline(dm_between_labels.flatten().mean(), c='r', ls='-', lw=1.5)
             axes[i, j].set_title("Afstand tussen label " + str(int(l1)) + " en label " + str(int(l2)))
-            axes[i, j].set_xlim([0, 12])
+            axes[i, j].set_xlim([2, 10])
             axes[i, j].set_ylim([0, 4500])
             axes[i, j].set(xlabel="", ylabel="")
             if i == j:
@@ -66,8 +67,10 @@ def plot_evolution_of_distribution_of_labels(labels):
         occurences[range(i, len(labels)),index] += 1
     occurences = occurences.transpose()
     for label in all_labels:
-        plt.plot(range(len(labels)), occurences[int(label-1)], label="label " + str(int(label)))
-
+        if not label == 4:
+            plt.plot(range(len(labels)), occurences[int(label-1)], label="label " + str(int(label)))
+        else:
+            plt.plot(range(len(labels)), occurences[int(label - 1)], label='ruis')
     plt.legend(loc="upper left")
     plt.xlabel("Tijdsreeksen")
     plt.ylabel("Aantal labels")
@@ -78,7 +81,7 @@ def plot_label_distribution(series, labels, distance_matrix):
     sns.set_palette("bright")
     sns.set(style='whitegrid')
     # similarity_matrix = np.exp(- distance_matrix ** 2 / (2 ** 2))
-    plot_distribution_distance_of_labels(labels, distance_matrix)
+    # plot_distribution_distance_of_labels(labels, distance_matrix)
     plot_evolution_of_distribution_of_labels(labels)
     # plot_distribution_distance_of_labels(labels, similarity_matrix, "gelijkheid", max=300)
 
@@ -111,3 +114,6 @@ def plot_DTW_of_TimeSeries_example():
     #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
 
     plt.show()
+distance_matrix = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
+series, labels, distance_matrix = make_new_datasets.modify_data(series, labels, distance_matrix, "stagnate")
+plot_label_distribution(series, labels, distance_matrix)

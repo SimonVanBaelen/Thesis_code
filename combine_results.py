@@ -2,13 +2,14 @@ from os import listdir
 from os.path import isfile, join
 import numpy as np
 
-path_load = 'results/CBF/seperate_full/homogeen/'
-path_save = 'results/CBF/combined_full/'
+path_load = 'results/CBF/seperate_full/sorted/'
+path_save = 'results/part1/sorted/'
 file_names = [f for f in listdir(path_load) if isfile(join(path_load, f))]
 
 method_results = [None, None, None, None, None]
 print(len(file_names))
 for fn in file_names:
+    print(fn.split("_")[3][-1])
     index = int(fn.split("_")[3][-1])-1
     print(fn.split("_"))
     new_results = np.load(path_load+fn)

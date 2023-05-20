@@ -156,7 +156,7 @@ def plot_mean_all_ari(all_ari_scores, dtw_file_name, labels):
     plt.show()
 
 
-def plot_box_plots(data, title, labels, method_names, indices, full_dtw_ari=None):
+def plot_box_plots(data, title, labels, method_names, indices, full_dtw_ari=None, ax=None):
     df = []
     methods = method_names
     for i in range(len(data)):
@@ -164,12 +164,13 @@ def plot_box_plots(data, title, labels, method_names, indices, full_dtw_ari=None
 
     df = pd.concat(df)  # CONCATENATE
     df = pd.melt(df, id_vars=['Methode'], var_name=['Number'])
+    print(df)
     sns.set_palette("deep")
     sns.set_style("darkgrid", {"grid.color": ".6", "grid.linestyle": ":"})
     # background_color = "aliceblue"
     ax = sns.boxplot(x="Number", y="value", hue="Methode", data=df,
                      flierprops=dict(marker='o', markerfacecolor='None', markersize=3, markeredgecolor='black'),
-                     showfliers=False)  # RUN PLOT
+                     showfliers=False, ax=ax)  # RUN PLOT
     ax.set(xlabel=labels[0], ylabel=labels[1])
     ax.set_title(title)
 
@@ -202,7 +203,7 @@ def plot_two_line_plots(data1, data2, title, labels, method_names, indices,  ax=
         axis.title(title)
 
 
-def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, indices, y_lim1, y_lim2):
+def plot_multiple_plots_seperate(data1, data2, title, subtitles, labels, method_names, indices, y_lim1, y_lim2):
     fig, ax = plt.subplots(2,3)
     colors2 = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
     for i in range(len(data1)):
@@ -242,44 +243,110 @@ def plot_multiple_plots(data1, data2, title, subtitles, labels, method_names, in
     #     axis.title(title)
 
 
-def full_plot_all_methods_seperate(filenames, method_names, dtw_file_name=None):
+def plot_median_error(ax, relative_error, colors,  method_names, indices, y_lim=[0.05, 0.46], linestyle = None,
+                      legend_title="Errors", full_dtw_calc=None):
+    t = []
+    if not y_lim is None:
+        ax.set_ylim(y_lim)
+    for i in range(len(relative_error)):
+        median_data = []
+        for j in range(len(relative_error[0][0, :])):
+            median_data.append(np.median(relative_error[i][:, j]))
+        if not linestyle is None:
+            t.append(ax.plot(indices, median_data, color=colors[i], label=method_names[i], linewidth=2, linestyle=linestyle))
+            ax.legend(title="Relatieve benaderingsfout")
+            ax.set_ylabel("Relatieve benaderingsfout")
+        else:
+            t.append(ax.plot(indices, median_data, color=colors[i], label=method_names[i], linewidth=2))
+            ax.legend(title=legend_title)
+            ax.set_ylabel("Aantal " + legend_title)
+        if not full_dtw_calc is None:
+            ax.plot(indices, full_dtw_calc, color="r", label="Volledige afstandsmatrix", linewidth=2)
+            full_dtw_calc = None
+        ax.set_xlabel("Aantal tijdsreeksen")
+
+def plot_multiple_plots_together(all_dtw_calculations, relative_error, title, method_names, labels, indices, y_lim, full_dtw_calc=None):
+    fig, ax = plt.subplots(1, 3)
+    colors2 = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
+    ax2 = [ax[0].twinx(), ax[1].twinx()]
+    plot_box_plots(all_dtw_calculations[0:3], "test", labels[0:3], method_names[0:3], indices, ax=ax[0])
+    plot_box_plots(all_dtw_calculations[3:len(relative_error)], "test", labels, method_names[3:len(relative_error)], indices, ax=ax[1])
+    plot_median_error(ax2[0], relative_error[0:3], colors2[0:3],  method_names[0:3], indices)
+    plot_median_error(ax2[1], relative_error[3:len(relative_error)], colors2[3:len(relative_error)], method_names[3:len(relative_error)], indices)
+    plot_median_error(ax[2], all_dtw_calculations, colors2, method_names, indices,y_lim=y_lim)
+    if not full_dtw_calc is None:
+        sns.lineplot(full_dtw_calc, color="r", label="Volledige afstandsmatrix", linewidth=2, ax=ax[2])
+    # plt.legend(title='Smoker', loc='upper left')
+    plt.show()
+    # plt.cla()
+
+
+def plot_skeletons(amount_of_skeletons, relative_error, title, method_names, labels4, indices, y_lim, full_dtw_calc=None):
+    fig, ax = plt.subplots(1, 3)
+    fig.suptitle(title)
+    colors2 = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
+    ax2 = [ax[0].twinx(), ax[1].twinx()]
+    if y_lim[1] < 1000:
+        legend_title = "Skeletten"
+        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[20, 140], legend_title=legend_title)
+    else:
+        legend_title = "DTW-calculaties"
+        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[0, 450000],legend_title=legend_title)
+    plot_median_error(ax[1], amount_of_skeletons[3:len(relative_error)], colors2[3:len(relative_error)],method_names[3:len(relative_error)], indices, y_lim=None, legend_title=legend_title)
+    plot_median_error(ax2[0], relative_error[0:3], colors2[0:3], method_names[0:3], indices, linestyle="--")
+    plot_median_error(ax2[1], relative_error[3:len(relative_error)], colors2[3:len(relative_error)], method_names[3:len(relative_error)], indices, linestyle="--")
+    plot_median_error(ax[2], amount_of_skeletons, colors2, method_names, indices, y_lim=y_lim, legend_title=legend_title, full_dtw_calc=full_dtw_calc)
+
+    plt.show()
+
+
+def full_plot_all_methods_seperate(filenames, method_names, dm_file_name=None):
     indices = [int(x) for x in np.load(filenames[0])[0,0,:]]
+    print(indices)
+    del indices[-1]
     amount_of_skeletons = []
     relative_error = []
     all_ari_scores = []
     all_dtw_calculations = []
-    print(indices)
     for filename in filenames:
         all_data = np.load(filename)
+        all_data = all_data[range(all_data.shape[0]-1), :, :]
+        all_data = all_data[:, :, range(all_data.shape[2]-1)]
         amount_of_skeletons.append(all_data[:,1,:])
         relative_error.append(all_data[:,2,:])
         all_ari_scores.append(all_data[:,3,:])
         all_dtw_calculations.append(all_data[:,4,:])
 
-    if not dtw_file_name is None:
-        full_dtw_ari = np.loadtxt(dtw_file_name, delimiter=",")
-    title1 = "Kwaliteit clustering bij gebruik verschillende methodes met homogene labels"
-    title2 = "Gemiddelde relatieve benaderingsfout bij gebruik verschillende methodes met homogene labels"
-    title3 = "Tijdscomplexiteit van verschillende methodes"
-    title4 = "Ruimtecomplexiteit van verschillende methodes"
+
+    title1 = "Kwaliteit clustering bij gebruik verschillende methodes"
+    title2 = "Gemiddelde relatieve benaderingsfout bij gebruik verschillende methodes"
+    title3 = "Tijdscomplexiteit van verschillende methodes samen met de relatieve benaderingsfout"
+    title4 = "Ruimtecomplexiteit van verschillende methodes samen met de relatieve benaderingsfout"
 
     labels1 = ["Aantal tijdsreeksen", "ARI-score"]
     labels2 = ["Aantal tijdsreeksen", "Relatieve benaderingsfout"]
     labels3 = ["Aantal tijdsreeksen", "Relatieve fout"]
     labels4 = ["Aantal tijdsreeksen", "Relatieve fout"]
 
-    # plot_box_plots(all_ari_scores, title1, labels1, method_names, indices)
-    # plt.show()
-    # plt.cla()
-    #
-    # plot_box_plots(relative_error, title2, labels2, method_names, indices)
-    # plt.show()
-    # plt.cla()
-
-    plot_multiple_plots(all_dtw_calculations, relative_error, title3, method_names, labels3, method_names, indices, y_lim1=[0, 600000], y_lim2=[0.1, 0.35])
-    plot_multiple_plots(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
+    if not dm_file_name is None:
+        full_dtw_ari = np.load(dm_file_name)
+        print(full_dtw_ari)
+        plot_box_plots(all_ari_scores, title1, labels1, method_names, indices, full_dtw_ari=full_dtw_ari[0,1,:])
+    else:
+        plot_box_plots(all_ari_scores, title1, labels1, method_names, indices, full_dtw_ari=None)
     plt.show()
     plt.cla()
+
+    plot_box_plots(relative_error, title2, labels2, method_names, indices)
+    plt.show()
+    plt.cla()
+
+    # plot_multiple_plots_seperate(all_dtw_calculations, relative_error, title3, method_names, labels3, method_names, indices, y_lim1=[0, 600000], y_lim2=[0.1, 0.35])
+    # plot_multiple_plots_seperate(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
+    # plot_multiple_plots_together(all_dtw_calculations, relative_error, title3, method_names, labels3, indices, y_lim=[0,600000], full_dtw_calc=full_dtw_ari[0,2,:])
+    plot_skeletons(all_dtw_calculations, relative_error, title3, method_names, labels3, indices, y_lim=[0, 700000], full_dtw_calc=full_dtw_ari[0,2,:])
+    plot_skeletons(amount_of_skeletons, relative_error, title4, method_names, labels4, indices, y_lim=[0,600])
+    # plot_multiple_plots_together(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
 
 def full_plot_all(filenames):
     ae_ari = np.array([])
@@ -290,15 +357,21 @@ def full_plot_all(filenames):
         ae_error = np.append(ae_error, all_data[:, 2, :])
     plt_error_ari(ae_error, ae_ari)
 
-dtw_ari_filename1 = "results/CBF/full_dtw_ari_400.csv"
-filename1 = "results/CBF/combined_full/method1_full.npy"
-filename2 = "results/CBF/combined_full/method2_full.npy"
-filename3 = "results/CBF/combined_full/method3_full.npy"
-filename4 = "results/CBF/combined_full/method4_full.npy"
-filename5 = "results/CBF/combined_full/method5_full.npy"
+filename0 = "full_dm_ari/CBF_full_dm_results_53_400_sorted.npy"
+filename1 = "results/part1/sorted/method1_full.npy"
+filename2 = "results/part1/sorted/method2_full.npy"
+filename3 = "results/part1/sorted/method3_full.npy"
+filename4 = "results/part1/sorted/method4_full.npy"
+filename5 = "results/part1/sorted/method5_full.npy"
+# filename1 = "results/part1/homogeen_batches/25/_method1_25.npy"
+# filename2 = "results/part1/homogeen_batches/25/_method2_25.npy"
+# filename3 = "results/part1/homogeen_batches/25/_method3_25.npy"
+# filename4 = "results/part1/homogeen_batches/25/_method4_25.npy"
+# filename5 = "results/part1/homogeen_batches/25/_method5_25.npy"
 
 names = [filename1, filename2, filename3, filename4, filename5]
-method_names = ["Skelet update", "Tolerantie-gebaseerde additieve update", "Adaptieve update", "Exacte additieve update", "Maximale additieve update"]
+
+method_names = ["Skelet update", "T.-g. additieve update", "Adaptieve update", "Exacte additieve update", "Maximale additieve update"]
 # full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
 # full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
-full_plot_all_methods_seperate(names, method_names)
+full_plot_all_methods_seperate(names, method_names, dm_file_name=filename0)
