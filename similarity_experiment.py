@@ -17,7 +17,12 @@ def get_distance_matrix_between_labels(l1, l2, labels, dm):
 # "FiftyWords", "CBF", "FaceAll", "StarLightCurves"
 # names = ["FiftyWords", "CBF", "FaceAll", "ECG5000", "ElectricDevices", "EthanolLevel", "ChlorineConcentration", "Wafer", "Crop"]
 # names = ["CBF"]
-names = []
+# "FiftyWords", "CBF", "Strawberry","Symbols",
+# names = [ "FiftyWords", "CBF", "Strawberry","Symbols", "Crop","ElectricDevices","Wafer"]
+names = [ "WordSynonyms", "CBF", "Strawberry","Symbols","ElectricDevices","Wafer"]
+# "FiftyWords", "CBF", "Strawberry","Symbols"
+#     ,"ElectricDevices","Wafer",
+names = ["CBF"]
 for name in names:
     print(name)
     path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
@@ -36,7 +41,7 @@ for name in names:
     series = series[0:start]
     # labels = labels[0:start]
     cp = ClusterProblem(series, func_name, compare_args=args)
-    distance_matrix = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
+    distance_matrix = np.load("distance_matrices/"+name+'_DM_nn.npy')
         # ACA(cp, tolerance=0.05, max_rank=9000).getApproximation()
 
     same = []
@@ -46,10 +51,12 @@ for name in names:
             dm_between_labels = get_distance_matrix_between_labels(l1, l2, labels, distance_matrix)
             if l1 == l2:
                 for v in dm_between_labels:
-                    same.append(np.average(v))
+                    for y in v:
+                        same.append(y)
             else:
                 for v in dm_between_labels:
-                    diff.append(np.average(v))
+                    for y in v:
+                        diff.append(y)
 
 
     print("Same label:", min(same), max(same), np.average(same), np.median(same))
@@ -67,7 +74,7 @@ for name in names:
 
     def function1(approx, e):
         lowest = 0.0001
-        a = (-e ** 2) / math.log(lowest)
+        a = (-(e ** 2)) / math.log(lowest)
         print(a)
         return np.exp(- (approx ** 2) / a)
 
@@ -76,6 +83,7 @@ for name in names:
 
     def function3(approx, e):
         return np.maximum(0, np.exp(-approx / e + 1))
-    possible_elements = [max(same), np.average(same), min(diff), np.average(diff)]
-    functions = [function1, function2, function3]
+    possible_elements = [np.average(diff)]
+    # max(same), np.average(same), min(diff),
+    functions = [function1]
     do_clustering_sim_diff_functions(distance_matrix, labels, functions, possible_elements)

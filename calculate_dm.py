@@ -21,10 +21,10 @@ def calculateAndSaveDM(start_i, name):
     _, series_test = load_timeseries_from_tsv(path_test)
     series = np.concatenate((series_train, series_test), axis=0)
 
-    filename = name + '_DM_nn.csv'
+    filename = name + '_DM_nn.npy'
     try:
         print("starting from previous dm")
-        dm = np.loadtxt(filename, delimiter=',')
+        dm = np.load(filename)
         if len(dm) < len(series):
             print("To short!", len(series)-len(dm))
             dm_to_short = np.zeros((len(series)-len(dm), len(series)))
@@ -32,7 +32,7 @@ def calculateAndSaveDM(start_i, name):
     except:
         print("starting from scratch")
         dm = np.zeros((len(series), len(series)))
-        np.savetxt(filename, dm, delimiter=',')
+        np.save(filename, dm)
 
     for i in range(start_i, len(series)):
         for j in range(0, len(series)):
@@ -47,13 +47,13 @@ def calculateAndSaveDM(start_i, name):
                     print(i, j)
                 else:
                     raise Exception("something went wrong")
-        # if i % 1000 == 0:
-        #     np.savetxt(filename, dm, delimiter=',')
+        if i % 1000 == 0:
+            np.save(filename, dm)
 
-    np.savetxt(filename, dm, delimiter=',')
+    np.save(filename, dm)
 
-already_found_names = ["CBF","EthanolLevel", "ChlorineConcentration", "Wafer", "Crop","FiftyWords","FaceAll","ElectricDevices","ECG5000"]
-all_names_to_do = [x[1] for x in [y[0].split("\\") for y in os.walk("Data")][1:-1] if x[1] not in already_found_names]
+# already_found_names = ["CBF","EthanolLevel", "ChlorineConcentration", "Wafer", "Crop","FiftyWords","FaceAll","ElectricDevices","ECG5000"]
+all_names_to_do = ["WordSynonyms"]
 start_i = 0
 for name in all_names_to_do:
     calculateAndSaveDM(start_i, name)

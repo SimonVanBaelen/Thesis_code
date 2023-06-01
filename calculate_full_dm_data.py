@@ -2,7 +2,7 @@ import copy
 import sys
 
 import pandas as pd
-from sklearn.cluster import SpectralClustering
+from sklearn.cluster import SpectralClustering, DBSCAN
 from sklearn.metrics import adjusted_rand_score
 
 import make_new_datasets
@@ -19,11 +19,13 @@ from numpy.linalg import norm
 def calculateClusters(approx, index, labels, cluster_algo,k):
     temp_approx = np.exp(- approx ** 2 / 4.021)
 
-    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
-    result_spec = model_spec.fit_predict(temp_approx)
+    # model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
+    model_spec = DBSCAN(eps=3.3, min_samples=7, metric='precomputed')
+
+    result_spec = model_spec.fit_predict(approx)
     norm_Approx_spectral = adjusted_rand_score(labels[0:index], result_spec)
 
-    return norm_Approx_spectral
+    return norm_Approx_spectral, len(set(result_spec))
 
 
 def add_series_to_dm(true, next, dm):
@@ -43,16 +45,16 @@ def print_result(new_result):
 
 
 def update_results(result, labels, active_dm, index, start_index, skip):
-    ARI_score = calculateClusters(active_dm, index, labels, "none", k=len(set(labels)))
+    ARI_score, amount_of_clusters = calculateClusters(active_dm, index, labels, "none", k=len(set(labels)))
     amount_of_dtws = index*index/2 - index
     print(index*index/2 - index)
-    new_result = [index, ARI_score, amount_of_dtws]
+    new_result = [index, ARI_score, amount_of_dtws, amount_of_clusters]
     print_result(new_result)
     result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
 
 
 def read_all_results(size, start_index, skip):
-    return np.zeros((1, 3, int((size - start_index) / skip)+1))
+    return np.zeros((1, 4, int((size - start_index) / skip)))
 
 
 def do_full_experiment(series, labels, dm, start_index, skip, name):
@@ -89,10 +91,10 @@ def load_data(name):
 
 name = "CBF"
 series, labels = load_data(name)
-true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
-series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm)
-start = int(len(series)/2)
-skip = 50
+true_dm = np.load("distance_matrices/"+name+'_DM_nn.npy')
+series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm, "new")
+start = 500
+skip = 10
 print(skip)
 print("start: ", start,"Skip: ", skip)
 do_full_experiment(series, labels, true_dm, start, skip, name)

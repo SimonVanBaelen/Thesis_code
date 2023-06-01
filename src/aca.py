@@ -67,6 +67,7 @@ class ACA:
         self.dtw_calculations = len(self.sample_indices)
         self.start_rank = len(self.rows)
         self.start_size = self.cp.size()
+        print(self.amount_of_samples_per_row)
 
     def choose_starting_pivot(self, new_run, current_state=None):
         if new_run or len(self.rows) == 0:

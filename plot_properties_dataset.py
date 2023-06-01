@@ -40,13 +40,13 @@ def plot_distribution_distance_of_labels(labels, distance_matrix):
     all_labels = set(labels)
     amount_of_labels = len(set(labels))
     fig, axes = plt.subplots(amount_of_labels, amount_of_labels)
-    fig.suptitle('Alle afstanden tussen de verschillende labels')
+    fig.suptitle('Alle afstanden tussen de verschillende clusters')
     for (l1, i) in zip(all_labels, range(amount_of_labels)):
         for (l2, j) in zip(all_labels, range(amount_of_labels)):
             dm_between_labels = get_distance_matrix_between_labels(l1, l2, labels, distance_matrix)
             sns.histplot(ax=axes[i, j], data=dm_between_labels.flatten())
             axes[i, j].axvline(dm_between_labels.flatten().mean(), c='r', ls='-', lw=1.5)
-            axes[i, j].set_title("Afstand tussen label " + str(int(l1)) + " en label " + str(int(l2)))
+            axes[i, j].set_title("Afstand tussen cluster " + str(int(l1)) + " en cluster " + str(int(l2)))
             axes[i, j].set_xlim([2, 10])
             axes[i, j].set_ylim([0, 4500])
             axes[i, j].set(xlabel="", ylabel="")
@@ -68,13 +68,13 @@ def plot_evolution_of_distribution_of_labels(labels):
     occurences = occurences.transpose()
     for label in all_labels:
         if not label == 4:
-            plt.plot(range(len(labels)), occurences[int(label-1)], label="label " + str(int(label)))
+            plt.plot(range(len(labels)), occurences[int(label-1)], label="Cluster " + str(int(label)))
         else:
-            plt.plot(range(len(labels)), occurences[int(label - 1)], label='ruis')
+            plt.plot(range(len(labels)), occurences[int(label - 1)], label='Ruis')
     plt.legend(loc="upper left")
     plt.xlabel("Tijdsreeksen")
-    plt.ylabel("Aantal labels")
-    plt.title("Evolutie van verschillende labels bij het toekomen van tijdsreeksen")
+    plt.ylabel("Aantal van elke cluster")
+    plt.title("Evolutie van verdeling clusters bij het toekomen van tijdsreeksen")
     plt.show()
 
 def plot_label_distribution(series, labels, distance_matrix):
@@ -114,6 +114,16 @@ def plot_DTW_of_TimeSeries_example():
     #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
 
     plt.show()
-distance_matrix = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
-series, labels, distance_matrix = make_new_datasets.modify_data(series, labels, distance_matrix, "stagnate")
+distance_matrix = np.load("distance_matrices/"+name+'_DM_nn.npy')
+
+def plot_function():
+    x = np.linspace(0, 8, 100)
+    y = np.exp(- x ** 2 / 4.021)
+    plt.plot(x, y, 'b')
+    plt.xlabel("afstand")
+    plt.ylabel("gelijkheid")
+    plt.show()
+
+# plot_function()
+series, labels, distance_matrix = make_new_datasets.modify_data(series, labels, distance_matrix, "sorted")
 plot_label_distribution(series, labels, distance_matrix)

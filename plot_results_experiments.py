@@ -6,6 +6,7 @@ from src.data_loader import load_timeseries_from_tsv
 from src.aca import ACA
 from dtaidistance import dtw, clustering
 import scipy.stats as stats
+import matplotlib.ticker as mtick
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -243,7 +244,7 @@ def plot_multiple_plots_seperate(data1, data2, title, subtitles, labels, method_
     #     axis.title(title)
 
 
-def plot_median_error(ax, relative_error, colors,  method_names, indices, y_lim=[0.05, 0.46], linestyle = None,
+def plot_median_error(ax, relative_error, colors,  method_names, indices, y_lim=[0.15, 0.325], linestyle = None,
                       legend_title="Errors", full_dtw_calc=None):
     t = []
     if not y_lim is None:
@@ -288,10 +289,10 @@ def plot_skeletons(amount_of_skeletons, relative_error, title, method_names, lab
     ax2 = [ax[0].twinx(), ax[1].twinx()]
     if y_lim[1] < 1000:
         legend_title = "Skeletten"
-        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[20, 140], legend_title=legend_title)
+        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[35, 70], legend_title=legend_title)
     else:
         legend_title = "DTW-calculaties"
-        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[0, 450000],legend_title=legend_title)
+        plot_median_error(ax[0], amount_of_skeletons[0:3], colors2[0:3], method_names[0:3], indices, y_lim=[0, 200000],legend_title=legend_title)
     plot_median_error(ax[1], amount_of_skeletons[3:len(relative_error)], colors2[3:len(relative_error)],method_names[3:len(relative_error)], indices, y_lim=None, legend_title=legend_title)
     plot_median_error(ax2[0], relative_error[0:3], colors2[0:3], method_names[0:3], indices, linestyle="--")
     plot_median_error(ax2[1], relative_error[3:len(relative_error)], colors2[3:len(relative_error)], method_names[3:len(relative_error)], indices, linestyle="--")
@@ -303,19 +304,21 @@ def plot_skeletons(amount_of_skeletons, relative_error, title, method_names, lab
 def full_plot_all_methods_seperate(filenames, method_names, dm_file_name=None):
     indices = [int(x) for x in np.load(filenames[0])[0,0,:]]
     print(indices)
-    del indices[-1]
+    # del indices[-1]
     amount_of_skeletons = []
     relative_error = []
     all_ari_scores = []
     all_dtw_calculations = []
+    amount_of_cluster = []
     for filename in filenames:
         all_data = np.load(filename)
-        all_data = all_data[range(all_data.shape[0]-1), :, :]
-        all_data = all_data[:, :, range(all_data.shape[2]-1)]
+        all_data = all_data[range(all_data.shape[0]), :, :]
+        all_data = all_data[:, :, range(all_data.shape[2])]
         amount_of_skeletons.append(all_data[:,1,:])
         relative_error.append(all_data[:,2,:])
         all_ari_scores.append(all_data[:,3,:])
         all_dtw_calculations.append(all_data[:,4,:])
+        # amount_of_cluster.append(all_data[:,5,:])
 
 
     title1 = "Kwaliteit clustering bij gebruik verschillende methodes"
@@ -330,7 +333,8 @@ def full_plot_all_methods_seperate(filenames, method_names, dm_file_name=None):
 
     if not dm_file_name is None:
         full_dtw_ari = np.load(dm_file_name)
-        print(full_dtw_ari)
+        # full_dtw_ari = full_dtw_ari[:,:,range(31)]
+        print(full_dtw_ari.shape)
         plot_box_plots(all_ari_scores, title1, labels1, method_names, indices, full_dtw_ari=full_dtw_ari[0,1,:])
     else:
         plot_box_plots(all_ari_scores, title1, labels1, method_names, indices, full_dtw_ari=None)
@@ -340,38 +344,126 @@ def full_plot_all_methods_seperate(filenames, method_names, dm_file_name=None):
     plot_box_plots(relative_error, title2, labels2, method_names, indices)
     plt.show()
     plt.cla()
-
-    # plot_multiple_plots_seperate(all_dtw_calculations, relative_error, title3, method_names, labels3, method_names, indices, y_lim1=[0, 600000], y_lim2=[0.1, 0.35])
-    # plot_multiple_plots_seperate(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
-    # plot_multiple_plots_together(all_dtw_calculations, relative_error, title3, method_names, labels3, indices, y_lim=[0,600000], full_dtw_calc=full_dtw_ari[0,2,:])
-    plot_skeletons(all_dtw_calculations, relative_error, title3, method_names, labels3, indices, y_lim=[0, 700000], full_dtw_calc=full_dtw_ari[0,2,:])
+    plot_skeletons(all_dtw_calculations, relative_error, title3, method_names, labels3, indices, y_lim=[0, 650000], full_dtw_calc=full_dtw_ari[0,2,:])
     plot_skeletons(amount_of_skeletons, relative_error, title4, method_names, labels4, indices, y_lim=[0,600])
-    # plot_multiple_plots_together(amount_of_skeletons, relative_error, title4, method_names, labels4, method_names, indices, y_lim1=[40,615], y_lim2=[0.1,0.35])
 
-def full_plot_all(filenames):
-    ae_ari = np.array([])
-    ae_error = np.array([])
-    for filename in filenames:
+def plot_amount_of_clusters(filename0, names, method_names):
+    filename0 = "full_dm_ari/CBF_full_dm_results_10_500.npy"
+    filename1 = "results/part1/new_label/method1_full.npy"
+    filename2 = "results/part1/new_label/method2_full.npy"
+    filename3 = "results/part1/new_label/method3_full.npy"
+    filename4 = "results/part1/new_label/method4_full.npy"
+    filename5 = "results/part1/new_label/method5_full.npy"
+    names = [filename1, filename2, filename3, filename4, filename5]
+    amount_of_cluster = []
+    full_dtw_ari = np.load(filename0)
+    print(full_dtw_ari.shape)
+    amount_of_clusters_exact = full_dtw_ari[0, 3, :]
+    indices = full_dtw_ari[0, 0, :]
+    print(indices)
+    colors = ["steelblue", "sandybrown", "mediumseagreen", "indianred", "mediumpurple"]
+    for filename, color, method_name in zip(names, colors, method_names):
         all_data = np.load(filename)
-        ae_ari = np.append(ae_ari, all_data[:, 3, :])
-        ae_error = np.append(ae_error, all_data[:, 2, :])
-    plt_error_ari(ae_error, ae_ari)
+        all_data = all_data[range(all_data.shape[0] - 1), :, :]
+        all_data = all_data[:, :, range(all_data.shape[2] - 1)]
+        tmp1 = []
+        tmp2 = []
+        for i in range(all_data[:, 5, :].shape[1]):
+            tmp1.append(np.median(all_data[:, 5, i]))
+            tmp2.append(np.mean(all_data[:, 5, i]))
+        amount_of_cluster.append(tmp1)
+        plt.plot(indices, tmp2, color=color, label=method_name, linewidth=2, linestyle='--')
+        # plt.plot(range(31), tmp2, color=color, label=method_name, linewidth=2)
+    plt.plot(indices, amount_of_clusters_exact, color='r', label="Exacte afstandsmatrix", linewidth=2, linestyle='--')
+    plt.xlabel("Aantal tijdsreeksen")
+    plt.ylabel("Gemiddeld aantal clusters")
+    plt.ylim([0,4.5])
+    plt.legend(loc="upper left")
+    plt.title("Het gemiddeld aantal clusters gevonden door elke update-methode")
+    plt.show()
 
-filename0 = "full_dm_ari/CBF_full_dm_results_53_400_sorted.npy"
-filename1 = "results/part1/sorted/method1_full.npy"
-filename2 = "results/part1/sorted/method2_full.npy"
-filename3 = "results/part1/sorted/method3_full.npy"
-filename4 = "results/part1/sorted/method4_full.npy"
-filename5 = "results/part1/sorted/method5_full.npy"
-# filename1 = "results/part1/homogeen_batches/25/_method1_25.npy"
-# filename2 = "results/part1/homogeen_batches/25/_method2_25.npy"
-# filename3 = "results/part1/homogeen_batches/25/_method3_25.npy"
-# filename4 = "results/part1/homogeen_batches/25/_method4_25.npy"
-# filename5 = "results/part1/homogeen_batches/25/_method5_25.npy"
-
+filename0 = "full_dm_ari/CBF_full_dm_results_25_465.npy"
+filename1 = "results/part1/homogeen_batches/25/_method1_25.npy"
+filename2 = "results/part1/homogeen_batches/25/_method2_25.npy"
+filename3 = "results/part1/homogeen_batches/25/_method3_25.npy"
+filename4 = "results/part1/homogeen_batches/25/_method4_25.npy"
+filename5 = "results/part1/homogeen_batches/25/_method5_25.npy"
 names = [filename1, filename2, filename3, filename4, filename5]
 
+
 method_names = ["Skelet update", "T.-g. additieve update", "Adaptieve update", "Exacte additieve update", "Maximale additieve update"]
-# full_plot_all_methods_seperate([names[1], names[2]], [method_names[1], method_names[2]], dtw_ari_filename1)
-# full_plot_all_methods_seperate([names[3], names[4]], [method_names[3], method_names[4]], dtw_ari_filename1)
-full_plot_all_methods_seperate(names, method_names, dm_file_name=filename0)
+# full_plot_all_methods_seperate(names, method_names, dm_file_name=filename0)
+# plot_amount_of_clusters(method_names)
+# plot_amount_of_clusters(0, 0, method_names)
+
+def show_plot(indices, data, names, title, label_y, colors):
+    label_x = "Aantal tijdsreeksen"
+    for d,n,c in zip(data, names, colors):
+        plt.plot(indices, d, label=n, color=c)
+    plt.ylabel(label_x)
+    plt.ylabel(label_y)
+    plt.title(title)
+    plt.legend(loc="upper left")
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
+    plt.show()
+    plt.cla()
+
+def show_plot_clustering(indices, data1, data2, names, title, label_y, colors):
+    label_x = "Aantal tijdsreeksen"
+    for d,n,c in zip(data1, names, colors):
+        plt.plot(indices, d, label="Benadering bij " + n, color=c)
+    for d,n,c in zip(data2, names, colors):
+        plt.plot(indices, d,'--', label="Exact bij " + n, color=c)
+    plt.ylim([-0.1,1])
+    plt.ylabel(label_x)
+    plt.ylabel(label_y)
+    plt.legend(loc="center left")
+    plt.title(title)
+    plt.show()
+    plt.cla()
+
+def plot_part2():
+    names = ["CBF", "Symbols", "WordSynonyms", "Strawberry", "Crop", "Wafer"]
+    # names = ["Crop", "Wafer"]
+    all_ARISpectralApprox = []
+    all_ARISpectralTrue = []
+    all_ARIAgglomerativeApprox = []
+    all_ARIAgglomerativeTrue = []
+    all_speedPercentage = []
+    all_spacePercentage = []
+    for name in names:
+        fileName = "results/part2/" + name + "/results.npy"
+        allData = np.load(fileName)
+        print(allData.shape)
+        ARISpectralApprox = []
+        ARISpectralTrue = []
+        ARIAgglomerativeApprox = []
+        ARIAgglomerativeTrue = []
+        speedPercentage = []
+        spacePercentage = []
+        for k in range(allData.shape[2]):
+            ARISpectralApprox.append(np.median(allData[:,4,k]))
+            ARISpectralTrue.append(np.median(allData[:,2,k]))
+            ARIAgglomerativeApprox.append(np.median(allData[:,5,k]))
+            ARIAgglomerativeTrue.append(np.median(allData[:,3,k]))
+            m = allData[0,0,k]
+            speedPercentage.append(np.mean(allData[:, 6, k] / (m*(m-1)/2)))
+            spacePercentage.append(np.mean(allData[:,1,k] * m / (m*(m-1)/2)))
+        all_ARISpectralApprox.append(ARISpectralApprox)
+        all_ARISpectralTrue.append(ARISpectralTrue)
+        all_ARIAgglomerativeApprox.append(ARIAgglomerativeApprox)
+        all_ARIAgglomerativeTrue.append(ARIAgglomerativeTrue)
+        all_speedPercentage.append(speedPercentage)
+        all_spacePercentage.append(spacePercentage)
+    indices = []
+    i = 0
+    for _ in range(len(all_speedPercentage[0])):
+        i += 1
+        indices.append("skip " + str(i))
+    colors = ["blue", "red", "green", "orange", "black", "rebeccapurple", "gray"]
+    show_plot_clustering(indices, all_ARISpectralApprox, all_ARISpectralTrue, names, "clustering - spectral", "test", colors)
+    show_plot_clustering(indices, all_ARIAgglomerativeApprox, all_ARIAgglomerativeTrue,names, "clustering - agglomerative", "test", colors)
+    show_plot(indices, all_speedPercentage, names, "speed", "test", colors)
+    show_plot(indices, all_spacePercentage, names, "space", "test", colors)
+
+plot_part2()

@@ -18,11 +18,10 @@ from numpy.linalg import norm
 def calculateClusters(approx, index, labels, cluster_algo,k):
     temp_approx = np.exp(- approx ** 2 / 4.021)
 
-    model_spec = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
-    result_spec = model_spec.fit_predict(temp_approx)
+    model_spec = DBSCAN(eps=3.3, min_samples=7, metric='precomputed')
+    result_spec = model_spec.fit_predict(np.abs(approx))
     norm_Approx_spectral = adjusted_rand_score(labels[0:index], result_spec)
-
-    return norm_Approx_spectral
+    return norm_Approx_spectral, len(set(result_spec))
 
 
 def add_series_to_dm(true, next, dm):
@@ -49,11 +48,12 @@ def print_result(new_result):
 
 def update_results(approximations, results, labels, true_dm, cluster_algo, k, index, start_index, skip):
     for approx, result in zip(approximations, results):
-        ARI_score = calculateClusters(approx.getApproximation(), index, labels, cluster_algo, k)
+        ARI_score, amount_of_clusters = calculateClusters(approx.getApproximation(), index, labels, cluster_algo, k)
         relative_error = np.sqrt(np.average(np.square(true_dm - approx.getApproximation())))
         amount_of_skeletons = len(approx.rows) + len(approx.full_dtw_rows)
         amount_of_dtws = approx.get_DTW_calculations()
-        new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
+        print(amount_of_clusters)
+        new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws, amount_of_clusters]
         print_result(new_result)
         result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
 
@@ -64,9 +64,9 @@ def read_all_results(file_names, size, start_index, skip):
     for file_name in file_names:
         try:
             result = np.load(file_name + ".npy")
-            results.append(np.append(result, [np.zeros((5, n_skips))], 0))
+            results.append(np.append(result, [np.zeros((6, n_skips))], 0))
         except:
-            results.append(np.zeros((1, 5, n_skips)))
+            results.append(np.zeros((1, 6, n_skips)))
     return results
 
 
@@ -78,9 +78,9 @@ def do_full_experiment(series, labels, dm, start_index, skip, methods, cluster_a
     seed_file_name = rn.randint(0,9999999999)
     for method in methods:
         if random_file:
-            file_names.append("results/stagnate/" + str(seed_file_name) + "_" + method + "_full")
+            file_names.append("results/new/" + str(seed_file_name) + "_" + method + "_full")
         else:
-            file_names.append("results/stagnate/" + method + "_full")
+            file_names.append("results/new/" + method + "_full")
     while True:
         if dm is not None:
             active_dm = dm[range(start_index), :]
@@ -128,9 +128,9 @@ def load_data(name):
 name = "CBF"
 series, labels = load_data(name)
 true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
-series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm,'stagnate')
+series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm,'new')
 methods = ["method1", "method2", "method3", "method4", "method5"]
-start = 400
-skip = int((len(series)-start)/10)
+start = 500
+skip = 10
 print("start: ", start,"Skip: ", skip)
 do_full_experiment(series, labels, true_dm, start, skip, methods, "spectral", rank=9000, iterations=1000)

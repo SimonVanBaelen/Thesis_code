@@ -1,9 +1,9 @@
 import numpy as np
 
 def make_new_label_dataset(series, labels, full_dm):
-    indices1 = np.where(labels == 1)[0][range(0, 200)]
-    indices2 = np.where(labels == 2)[0][range(0, 200)]
-    indices3 = np.where(labels == 3)[0][range(0, 200)]
+    indices1 = np.where(labels == 3)[0][range(0, 250)]
+    indices2 = np.where(labels == 1)[0][range(0, 250)]
+    indices3 = np.where(labels == 2)[0]
     indices12 = np.concatenate((indices1, indices2))
     all_indices = np.concatenate((indices12, indices3))
 
