@@ -53,7 +53,7 @@ def update_results(approximations, results, labels, true_dm, cluster_algo, k, in
         amount_of_dtws = approx.get_DTW_calculations()
         new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
         result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
-
+        print_result(new_result)
 
 def read_all_results(file_names, size, start_index, skip):
     results = []
