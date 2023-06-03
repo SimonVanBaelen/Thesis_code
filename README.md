@@ -13,19 +13,19 @@ To create an ACA approximation, use the following code:
 #### Extending previous ACA approximations
 This ACA approximation can be extended using:
 
-  ACA_approximation.extend(new_series, method=method)
+    ACA_approximation.extend(new_series, method=method)
 
 As input for the 'method' parameter, the options are:
-For the skeleton update: "method1" or "skeleton update".
-For the tolerance-based update: "method2" or "tolerance-based update".
-For the adaptive update: "method3" or "adaptive update".
-For the exact update: "method4"  or "exact update".
-For the maximal update :"method5"  or"maximal update".
+- For the skeleton update: "method1" or "skeleton update".
+- For the tolerance-based update: "method2" or "tolerance-based update".
+- For the adaptive update: "method3" or "adaptive update".
+- For the exact update: "method4"  or "exact update".
+- For the maximal update :"method5"  or"maximal update".
 
 #### Get the current ACA approximation:
 Use the following function:
 
-  ACA_approximation.getApproximation()
+    ACA_approximation.getApproximation()
 
 ## References
 
