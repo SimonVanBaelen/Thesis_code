@@ -1,7 +1,7 @@
 # Thesis_code
 
 This is the code used for my master's thesis, where an extendable version of Adaptive Cross Approximation was used to speed up the clustering of a growing amount of timeseries.
-This implementation is an extension on the code given by Mathias Pede [1], which was published alongside [2]. In the experiments, the timeseries of the UCR archive were used [2].
+This implementation is an extension on the code given by Mathias Pede [2], which was published alongside [3]. In the experiments, the timeseries of the UCR archive were used [1].
 
 #### Create a first ACA approximation
 To create an ACA approximation, use the following code:
