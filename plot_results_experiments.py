@@ -465,7 +465,6 @@ def plot_part2():
         all_spacePercentagePerUpdate.append(spacePercentagePerUpdate)
     indices = []
     indices2 = []
-    i = 0
     for i in range(len(all_speedPercentage[0])):
         indices.append(str(5+i) + "m/10")
         if i > 0:
