@@ -1,8 +1,5 @@
-import os
-
 import numpy as np
 from dtaidistance import dtw
-import sys
 from src.data_loader import load_timeseries_from_tsv
 
 def calculate(series,i,j,dm):
@@ -13,7 +10,11 @@ def calculate(series,i,j,dm):
     else:
         dm[i][j] = dm[j][i]
 
-def calculateAndSaveDM(start_i, name):
+def calculateAndSaveDM(start_i, name, skip):
+    """
+    Calculates and saves a distance matrix every 'skip' amount of rows, starting from a given index.
+    Used to calculate large distance matrices in multiple sessions.
+    """
     path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
     _, series_train = load_timeseries_from_tsv(path_train)
 
@@ -47,13 +48,12 @@ def calculateAndSaveDM(start_i, name):
                     print(i, j)
                 else:
                     raise Exception("something went wrong")
-        if i % 1000 == 0:
+        if i % skip == 0:
             np.save(filename, dm)
 
     np.save(filename, dm)
 
-# already_found_names = ["CBF","EthanolLevel", "ChlorineConcentration", "Wafer", "Crop","FiftyWords","FaceAll","ElectricDevices","ECG5000"]
-all_names_to_do = ["WordSynonyms"]
+all_names_to_do = ["INSERT NAME HERE"]
 start_i = 0
 for name in all_names_to_do:
     calculateAndSaveDM(start_i, name)

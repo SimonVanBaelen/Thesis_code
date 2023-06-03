@@ -1,34 +1,15 @@
-import math
-
-import pandas as pd
 from dtaidistance import dtw
 from scipy.stats import stats
-import make_new_datasets
-from sklearn.cluster import SpectralClustering
-from sklearn.metrics import adjusted_rand_score
-
-from src.aca import ACA
-from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+"""
 
-name = "CBF" # sys.argv[1]
-path_train = "Data/" + name + "/" + name + "_TRAIN.tsv"
-labels_train, series_train = load_timeseries_from_tsv(path_train)
+This file contains used functions to make plots.
 
-path_test = "Data/" + name + "/" + name + "_TEST.tsv"
-labels_test, series_test = load_timeseries_from_tsv(path_test)
-
-labels = np.concatenate((labels_train, labels_test), axis=0)
-series = np.concatenate((series_train, series_test), axis=0)
-
-
-func_name = "dtw"         # "msm"/"ed" other options
-args = {"window": len(series[0])-1}   # for MSM "c" parameter
-
+"""
 
 def get_distance_matrix_between_labels(l1, l2, labels, dm):
     indices_l1 = np.where(labels == l1)[0]
@@ -81,11 +62,14 @@ def plot_label_distribution(series, labels, distance_matrix):
     sns.set_palette("bright")
     sns.set(style='whitegrid')
     # similarity_matrix = np.exp(- distance_matrix ** 2 / (2 ** 2))
-    # plot_distribution_distance_of_labels(labels, distance_matrix)
+    plot_distribution_distance_of_labels(labels, distance_matrix)
     plot_evolution_of_distribution_of_labels(labels)
     # plot_distribution_distance_of_labels(labels, similarity_matrix, "gelijkheid", max=300)
 
 def plot_DTW_of_TimeSeries_example():
+    """
+    Plots the DTW allignement between two timeseries.
+    """
     fig, ax = plt.subplots(nrows=1, ncols=3)
     s1 = stats.zscore(np.array([0,0,0,-1,2,3,4,3,5,-1]))
     s2 = stats.zscore(np.array([-1,2,3,4,3,5,-1]))
@@ -114,9 +98,11 @@ def plot_DTW_of_TimeSeries_example():
     #                     warping_line_options={'linewidth': 0.1, 'color': 'white', 'alpha': 0.8})
 
     plt.show()
-distance_matrix = np.load("distance_matrices/"+name+'_DM_nn.npy')
 
 def plot_function():
+    """
+    Plots a function.
+    """
     x = np.linspace(0, 8, 100)
     y = np.exp(- x ** 2 / 4.021)
     plt.plot(x, y, 'b')
@@ -124,6 +110,7 @@ def plot_function():
     plt.ylabel("gelijkheid")
     plt.show()
 
+# distance_matrix = np.load("distance_matrices/"+name+'_DM_nn.npy')
 # plot_function()
-series, labels, distance_matrix = make_new_datasets.modify_data(series, labels, distance_matrix, "sorted")
-plot_label_distribution(series, labels, distance_matrix)
+# series, labels, distance_matrix = make_new_datasets.modify_data(series, labels, distance_matrix, "sorted")
+# plot_label_distribution(series, labels, distance_matrix)

@@ -1,19 +1,12 @@
 import copy
-import sys
-
-import pandas as pd
-from sklearn.cluster import SpectralClustering, DBSCAN
+from sklearn.cluster import SpectralClustering
 from sklearn.metrics import adjusted_rand_score
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
-from src.aca import ACA
+from src.extendable_aca import ACA
 import random as rn
 import make_new_datasets
-from dtaidistance import dtw, clustering
-import scipy.stats as stats
-import matplotlib.pyplot as plt
 import numpy as np
-from numpy.linalg import norm
 
 def calculateClusters(approx, index, labels, cluster_algo,k):
     temp_approx = np.exp(- approx ** 2 / 4.021)
@@ -54,8 +47,8 @@ def update_results(approximations, results, labels, true_dm, cluster_algo, k, in
         amount_of_skeletons = len(approx.rows) + len(approx.full_dtw_rows)
         amount_of_dtws = approx.get_DTW_calculations()
         new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
-        print_result(new_result)
         result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
+        print_result(new_result)
 
 
 def read_all_results(file_names, size, start_index, skip):
@@ -127,7 +120,7 @@ def load_data(name):
 
 name = "CBF"
 series, labels = load_data(name)
-true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
+true_dm = np.load("distance_matrices/"+name+'_DM_nn.npy')
 series, labels, true_dm = make_new_datasets.modify_data(series, labels, true_dm,'stagnate')
 methods = ["method1", "method2", "method3", "method4", "method5"]
 start = 400

@@ -1,15 +1,12 @@
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering, KMeans
-from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
-from src.aca import ACA
-from dtaidistance import dtw, clustering
-import scipy.stats as stats
-import matplotlib.pyplot as plt
+from src.extendable_aca import ACA
 import numpy as np
-from numpy.linalg import norm
 
-# FacesUCR, FaceAll
+"""
+Test code for debugging purposes
+"""
+
 names = ["CBF"]
 
 name = names[0]
@@ -19,11 +16,11 @@ labels_train, series_train = load_timeseries_from_tsv(path_train)
 path_test = "Data/" + name + "/" + name + "_TEST.tsv"
 labels_tr, series = load_timeseries_from_tsv(path_test)
 
-func_name = "dtw"         # "msm"/"ed" other options
-args = {"window": len(series[0])-1}   # for MSM "c" parameter
+func_name = "dtw"
+args = {"window": len(series[0])-1}
 
 
-full_dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
+full_dm = np.load('distance_matrices/CBF_DM_nn.npy')
 
 
 start_index = 400

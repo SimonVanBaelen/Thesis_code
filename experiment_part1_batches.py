@@ -6,7 +6,7 @@ from sklearn.cluster import SpectralClustering
 from sklearn.metrics import adjusted_rand_score
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
-from src.aca import ACA
+from src.extendable_aca import ACA
 import random as rn
 from dtaidistance import dtw, clustering
 import scipy.stats as stats
@@ -52,7 +52,6 @@ def update_results(approximations, results, labels, true_dm, cluster_algo, k, in
         amount_of_skeletons = len(approx.rows) + len(approx.full_dtw_rows)
         amount_of_dtws = approx.get_DTW_calculations()
         new_result = [index, amount_of_skeletons, relative_error, ARI_score, amount_of_dtws]
-        print_result(new_result)
         result[len(result) - 1, :, int((index - start_index) / skip)] = np.array(new_result)
 
 
@@ -125,21 +124,12 @@ def load_data(name):
     series = np.concatenate((series_train, series_test), axis=0)
     return series, labels
 
-def modify_data(series, labels, true_dm, modify_name=None):
-    if modify_name == 'stagnate':
-        pass
-    elif modify_name == 'noise':
-        pass
-    elif modify_name == 'unknown_label':
-        pass
-    return series, labels, true_dm
 
 name = "CBF"
 series, labels = load_data(name)
-true_dm = np.loadtxt("distance_matrices/"+name+'_DM_nn.csv', delimiter=',')
-series, labels, true_dm = modify_data(series, labels, true_dm)
+true_dm = np.load('distance_matrices/CBF_DM_nn.npy')
 methods = ["method1", "method2", "method3", "method4", "method5"]
 start = int(len(series)/2)
-skip = 25
+skip = 100
 print("start: ", start,"Skip: ", skip)
 do_full_experiment(series, labels, true_dm, start, skip, methods, "spectral", rank=9000, iterations=1000, random_file=False)

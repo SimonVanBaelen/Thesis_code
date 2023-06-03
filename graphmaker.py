@@ -2,8 +2,11 @@ import matplotlib.pyplot as plt
 from dtaidistance import dtw
 from dtaidistance import dtw_visualisation as dtwvis
 from matplotlib.animation import FuncAnimation, PillowWriter
-from dtaidistance import ed
 import numpy as np
+
+"""
+File used to create some illustrations used in my intermediate defense.
+"""
 
 def plotTimeSeries(s):
     x = [x for x in range(0, len(s))]
@@ -115,5 +118,3 @@ def plot_multiple_graphs_on_same_graph(plots, x):
     for s in plots:
         plt.plot(x, s, linewidth=3)
     plt.show()
-
-# plot_DTW_of_TimeSeries_example()

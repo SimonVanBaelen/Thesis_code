@@ -11,7 +11,7 @@ from sklearn.metrics import adjusted_rand_score
 
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
-from src.aca import ACA
+from src.extendable_aca import ACA
 import random as rn
 import numpy as np
 
@@ -23,7 +23,7 @@ def calculateClusters(approx, index, labels, a_spectral, k, name):
     temp_approx = np.exp(- approx ** 2 / a_spectral)
 
     spectral = SpectralClustering(n_clusters=k, affinity='precomputed', assign_labels='kmeans', random_state=0)
-    agglomerative = AgglomerativeClustering(n_clusters=k, metric='precomputed', linkage='complete')
+    agglomerative = AgglomerativeClustering(n_clusters=k, affinity='precomputed', linkage='complete')
     pred_spectral = spectral.fit_predict(temp_approx)
     pred_agglo = agglomerative.fit_predict(approx)
     ARI_Approx_spectral = adjusted_rand_score(labels[0:index], pred_spectral)
@@ -138,16 +138,14 @@ def load_data(name):
 
 # already_found_names = ["CBF", "ChlorineConcentration", "CinCECGTorso"]
 # names = [x[1] for x in [y[0].split("\\") for y in os.walk("Data")][1:-1] if x[1] not in already_found_names]
-names = ["Wafer"]
-variables_spectral = [8.691]
+names = []
+variables_spectral = []
 for name, a_spectral in zip(names, variables_spectral):
     series, labels = load_data(name)
     true_dm = np.load("distance_matrices/" + name + '_DM_nn.npy')
     methods = ["method3"]
     start = int(len(series) / 2)
-    skip = int((len(series) - start) / 10)
-    if name == "Wafer":
-        skip = int((len(series) - start) / 5)
+    skip = int((len(series) - start) / 5)
     print("start: ", start, "Skip: ", skip)
 
     do_full_experiment(series, labels, true_dm, start, skip, methods, "spectral", a_spectral, name, rank=9000,

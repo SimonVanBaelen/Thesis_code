@@ -3,30 +3,21 @@ from sklearn.cluster import AgglomerativeClustering, SpectralClustering, KMeans
 from sklearn.metrics import adjusted_rand_score, confusion_matrix
 from src.cluster_problem import ClusterProblem
 from src.data_loader import load_timeseries_from_tsv
-from src.aca import ACA
+from src.extendable_aca import ACA
 from dtaidistance import dtw, clustering
 import scipy.stats as stats
 import matplotlib.ticker as mtick
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from matplotlib.ticker import PercentFormatter
 from numpy.linalg import norm
 
-def calculateAndSaveDM(series):
-    dm = np.loadtxt('CBF_DM_nn.csv', delimiter=',')
-    # dm = np.zeros((len(series), len(series)))
-    # np.savetxt('CBF_DM_nn.csv', dm, delimiter=',')
-    print(dm.shape)
-    for i in range(0, len(series)):
-        for j in range(0, len(series)):
-            if j > i:
-                dm[i][j] = dtw.distance(series[i], series[j])
-            elif j == i:
-                dm[i][j] = 0
-            else:
-                dm[i][j] = dm[j][i]
-            print(i,j)
-        np.savetxt('CBF_DM_nn.csv', dm, delimiter=',')
+"""
+
+This file contains functions to make plots
+
+"""
 
 def plt_ari(ari_score_approx, ari_score_dtw, labels, method):
     boxes = [ari_score_approx[range(0, len(ari_score_approx)), j] for j in range(len(labels))]
@@ -396,34 +387,40 @@ method_names = ["Skelet update", "T.-g. additieve update", "Adaptieve update", "
 # plot_amount_of_clusters(method_names)
 # plot_amount_of_clusters(0, 0, method_names)
 
-def show_plot(indices, data, names, title, label_y, colors):
-    label_x = "Aantal tijdsreeksen"
+def show_plot(indices, data, names, title, label_y, colors, ax, legend=True, ylim=None):
     for d,n,c in zip(data, names, colors):
-        plt.plot(indices, d, label=n, color=c)
-    plt.ylabel(label_x)
-    plt.ylabel(label_y)
-    plt.title(title)
-    plt.legend(loc="upper left")
-    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
-    plt.show()
-    plt.cla()
+        ax.plot(indices, d, label=n, color=c)
+    # ax.set_ylim([-0.1,1])
+    ax.set(xlabel="Aantal tijdsreeksen", ylabel=label_y)
+    if legend:
+        ax.legend(loc="lower left")
+    ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=3))
+    ax.set_title(title)
+    ax.grid(True)
+    if not ylim is None:
+        ax.set_ylim(ylim)
+    # plt.ylim([0,1])
+    # plt.show()
+    # plt.cla()
 
-def show_plot_clustering(indices, data1, data2, names, title, label_y, colors):
-    label_x = "Aantal tijdsreeksen"
+def show_plot_clustering(indices, data1, data2, names, title, label_y, colors, ax, legend=True):
     for d,n,c in zip(data1, names, colors):
-        plt.plot(indices, d, label="Benadering bij " + n, color=c)
+        ax.plot(indices, d, label="Benadering bij " + n, color=c)
     for d,n,c in zip(data2, names, colors):
-        plt.plot(indices, d,'--', label="Exact bij " + n, color=c)
-    plt.ylim([-0.1,1])
-    plt.ylabel(label_x)
-    plt.ylabel(label_y)
-    plt.legend(loc="center left")
-    plt.title(title)
-    plt.show()
-    plt.cla()
+        ax.plot(indices, d,'--', label="Exact bij " + n, color=c)
+    ax.set_ylim([-0.1,1])
+    ax.set(xlabel="Aantal tijdsreeksen", ylabel=label_y)
+    # plt.set_xlabel("Aantal tijdsreeksen")
+    # plt.ylabel(label_y)
+    if legend:
+        ax.legend(loc="center left")
+    ax.grid(True)
+    ax.set_title(title)
+    # plt.show()
+    # plt.cla()
 
 def plot_part2():
-    names = ["CBF", "Symbols", "WordSynonyms", "Strawberry", "Crop", "Wafer"]
+    names = ["CBF", "Symbols", "WordSynonyms", "Strawberry", "Crop", "Wafer", "ElectricDevices"]
     # names = ["Crop", "Wafer"]
     all_ARISpectralApprox = []
     all_ARISpectralTrue = []
@@ -431,6 +428,8 @@ def plot_part2():
     all_ARIAgglomerativeTrue = []
     all_speedPercentage = []
     all_spacePercentage = []
+    all_speedPercentagePerUpdate = []
+    all_spacePercentagePerUpdate = []
     for name in names:
         fileName = "results/part2/" + name + "/results.npy"
         allData = np.load(fileName)
@@ -441,29 +440,57 @@ def plot_part2():
         ARIAgglomerativeTrue = []
         speedPercentage = []
         spacePercentage = []
-        for k in range(allData.shape[2]):
-            ARISpectralApprox.append(np.median(allData[:,4,k]))
-            ARISpectralTrue.append(np.median(allData[:,2,k]))
-            ARIAgglomerativeApprox.append(np.median(allData[:,5,k]))
-            ARIAgglomerativeTrue.append(np.median(allData[:,3,k]))
-            m = allData[0,0,k]
-            speedPercentage.append(np.mean(allData[:, 6, k] / (m*(m-1)/2)))
-            spacePercentage.append(np.mean(allData[:,1,k] * m / (m*(m-1)/2)))
+        speedPercentagePerUpdate = []
+        spacePercentagePerUpdate = []
+        for k in range(0,allData.shape[2]):
+            ARISpectralApprox.append(np.mean(allData[:,4,k]))
+            ARISpectralTrue.append(np.mean(allData[:,2,k]))
+            ARIAgglomerativeApprox.append(np.mean(allData[:,5,k]))
+            ARIAgglomerativeTrue.append(np.mean(allData[:,3,k]))
+            m = allData[0, 0, k]
+            if k > 0:
+                m_prev = allData[0,0,k-1]
+                tmp = (m*(m-1)/2)-(m_prev*(m_prev-1)/2)
+                speedPercentagePerUpdate.append(1-(np.mean((allData[:, 6, k]-allData[:, 6, k-1]) / tmp)))
+                spacePercentagePerUpdate.append(1-(np.mean((allData[:, 1, k]-allData[:, 1, k-1])*m / tmp)))
+            speedPercentage.append(1-np.mean(allData[:, 6, k] / (m*(m-1)/2)))
+            spacePercentage.append(1-np.mean(allData[:,1,k] * m / (m*m)))
         all_ARISpectralApprox.append(ARISpectralApprox)
         all_ARISpectralTrue.append(ARISpectralTrue)
         all_ARIAgglomerativeApprox.append(ARIAgglomerativeApprox)
         all_ARIAgglomerativeTrue.append(ARIAgglomerativeTrue)
         all_speedPercentage.append(speedPercentage)
         all_spacePercentage.append(spacePercentage)
+        all_speedPercentagePerUpdate.append(speedPercentagePerUpdate)
+        all_spacePercentagePerUpdate.append(spacePercentagePerUpdate)
     indices = []
+    indices2 = []
     i = 0
-    for _ in range(len(all_speedPercentage[0])):
-        i += 1
-        indices.append("skip " + str(i))
+    for i in range(len(all_speedPercentage[0])):
+        indices.append(str(5+i) + "m/10")
+        if i > 0:
+            indices2.append(str(4+i) + "m/10 -->" + str(5+i) + "m/10")
     colors = ["blue", "red", "green", "orange", "black", "rebeccapurple", "gray"]
-    show_plot_clustering(indices, all_ARISpectralApprox, all_ARISpectralTrue, names, "clustering - spectral", "test", colors)
-    show_plot_clustering(indices, all_ARIAgglomerativeApprox, all_ARIAgglomerativeTrue,names, "clustering - agglomerative", "test", colors)
-    show_plot(indices, all_speedPercentage, names, "speed", "test", colors)
-    show_plot(indices, all_spacePercentage, names, "space", "test", colors)
+
+    fig, ax = plt.subplots(1, 2)
+    show_plot_clustering(indices, all_ARISpectralApprox, all_ARISpectralTrue, names, "De kwaliteit van de spectraal clustering", "Gemiddelde ARI-score", colors, ax[0])
+    show_plot_clustering(indices, all_ARIAgglomerativeApprox, all_ARIAgglomerativeTrue, names, "De kwaliteit van de agglomeratieve clustering", "Gemiddelde ARI-score", colors, ax[1], legend=False)
+    plt.show()
+    plt.cla()
+
+    fig, ax = plt.subplots(1, 2)
+    show_plot(indices, all_speedPercentage, names, "Winst in totale snelheid", "Percentage uitgespaarde DTW-calculaties", colors, ax[0], ylim=[0.3,1.005])
+    show_plot(indices2, all_speedPercentagePerUpdate, names, "Winst in snelheid per update",
+              "Percentage uitgespaarde DTW-calculaties", colors, ax[1], legend=False, ylim=[0.3,1.005])
+    plt.show()
+    # plt.cla()
+
+    fig, ax = plt.subplots(1, 2)
+    plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1.0))
+    show_plot(indices, all_spacePercentage, names, "Winst in totaal geheugengebruik", "Percentage van uitgespaarde geheugenopslag", colors, ax[0], ylim=[0.75,1.005])
+    show_plot(indices2, all_spacePercentagePerUpdate, names, "Winst in geheugengebruik per update",
+              "Percentage van uitgespaarde geheugenopslag", colors, ax[1], legend=False, ylim=[0.75,1.005])
+    plt.show()
+    # plt.cla()
 
 plot_part2()

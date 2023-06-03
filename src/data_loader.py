@@ -1,12 +1,17 @@
+"""
+###################################################################################################################
+    All functions in this file were made by Mathias Pede, some functions that were unnecessary were removed.
+    The original code can be found in [1] and was published alongside [2].
+
+    [1]: M. Pede. Fast-time-series-clustering, 2020.
+    https://github.com/MathiasPede/Fast-Time-Series-Clustering Accessed: (October 23,2022).
+
+    [2]: M. Pede. Snel clusteren van tijdreeksen via lage-rang benaderingen. Master’s
+    thesis, Faculteit Ingenieurswetenschappen, KU Leuven, Leuven, Belgium, 2020.
+###################################################################################################################
+"""
+
 import numpy as np
-import logging
-
-"""
-MATHIAS PEDE
-"""
-
-logger = logging.getLogger("ftsc")
-
 
 def load_timeseries_from_tsv(path):
     """
@@ -15,9 +20,7 @@ def load_timeseries_from_tsv(path):
     @param path:
     @return:
     """
-    logger.debug("Loading data from: " + path)
     data = np.genfromtxt(path, delimiter='\t')
-    logger.debug("Loaded " + str(len(data)) + " data entries")
     labels, series = data[:, 0], data[:, 1:]
     return labels, series
 

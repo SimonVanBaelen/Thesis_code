@@ -3,25 +3,24 @@ from sklearn.cluster import SpectralClustering
 from sklearn.metrics import adjusted_rand_score
 
 # from plot_properties_dataset import get_distance_matrix_between_labels
-from src.aca import ACA
+from src.extendable_aca import ACA
 from src.cluster_problem import ClusterProblem
 import numpy as np
 
 from src.data_loader import load_timeseries_from_tsv
 
 def get_distance_matrix_between_labels(l1, l2, labels, dm):
+    """
+    Creates a distance matrix of timeseries that belong only to two clusters.
+    """
     indices_l1 = np.where(labels == l1)[0]
     indices_l2 = np.where(labels == l2)[0]
     tmp = dm[indices_l1, :]
     return tmp[:, indices_l2]
-# "FiftyWords", "CBF", "FaceAll", "StarLightCurves"
-# names = ["FiftyWords", "CBF", "FaceAll", "ECG5000", "ElectricDevices", "EthanolLevel", "ChlorineConcentration", "Wafer", "Crop"]
-# names = ["CBF"]
-# "FiftyWords", "CBF", "Strawberry","Symbols",
-# names = [ "FiftyWords", "CBF", "Strawberry","Symbols", "Crop","ElectricDevices","Wafer"]
-names = [ "WordSynonyms", "CBF", "Strawberry","Symbols","ElectricDevices","Wafer"]
-# "FiftyWords", "CBF", "Strawberry","Symbols"
-#     ,"ElectricDevices","Wafer",
+
+"""
+Experiment used to evaluate different similarity measures.
+"""
 names = ["CBF"]
 for name in names:
     print(name)

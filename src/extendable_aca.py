@@ -1,33 +1,47 @@
+"""
+###################################################################################################################
+    Some of the functions/classes in this file are made by Mathias Pede and modified to be used in this work.
+    The original code can be found in [1] and was published alongside [2]. The functions that were made
+    by Mathias P. and modified were:
+    1. __init__(...): Was originally a function called 'aca_symm' but was expanded to a class. The init-function was
+    inspired by 'aca_symm'.
+    2. choose_starting_pivot and choose_new_pivot: Were originally part of  'aca_symmetric_body'
+    3. aca_symmetric_body: States were added to this function.
+    4. calc_symmetric_matrix_approx
+    5. generate_samples_student_distribution: Error margin was increased to 0.02
+
+    [1]: M. Pede. Fast-time-series-clustering, 2020.
+    https://github.com/MathiasPede/Fast-Time-Series-Clustering Accessed: (October 23,2022).
+
+    [2]: M. Pede. Snel clusteren van tijdreeksen via lage-rang benaderingen. Master’s
+    thesis, Faculteit Ingenieurswetenschappen, KU Leuven, Leuven, Belgium, 2020.
+###################################################################################################################
+"""
+
 import numpy as np
 import random as rnd
-import logging
 import copy
-
-from math import sqrt, floor
+from math import sqrt
 from src.cluster_problem import ClusterProblem
-
-logger = logging.getLogger("ftsc")
 
 class ACA:
     def __init__(self, cp: ClusterProblem, tolerance=0.05, max_rank=None, start_index=None, seed=None,
-                 start_indices=None, restart_deltas=None,restart_with_prev_pivots=False, start_samples=None):
+                 given_indices=None, given_deltas=None,restart_with_prev_pivots=False, start_samples=None):
         """
-        Adaptive Cross Approximation for Symmetric Distance Matrices
-
-        @param cp: Cluster Problem, includes the objects and a compare function
-        @param tolerance: An estimated relative error of the resulting approximation
-        @param max_rank: The maximal rank of the approximation (number of crosses)
-        @param start_index: Optional first row to start the first cross
-        @param seed: Optional seed to make algorithm deterministic
-
-        @return: Approximation of the distance matrix of the cluster problem with an approximated relative error equal
-        to the tolerance parameter.
+        Creates an Adaptive Cross Approximation objects, which can be extended using five different extension methods.
+        
+        :param cp: A cluster problem which contains the timeseries or a solved distancematrix
+        :param tolerance: The tolerance for the tolerated error
+        :param max_rank: The maximum rank of the ACA approximation.
+        :param start_index: The start index of the approximation.
+        :param seed: The seed.
+        :param given_indices: Force an ACA approximation to use the given indices
+        :param given_deltas: Force an ACA approximation to use the given deltas (given_indices should not be None)
+        :param restart_with_prev_pivots: Boolean that when enabled, forces the given_indices and given_deltas
+        :param start_samples: Start with a given collection of samples.
         """
 
-        if not 0.0 < tolerance < 1.0:
-            logger.error("Opted tolerance not within [0.0,1.0] range")
         if not max_rank or max_rank > cp.size():
-            logger.debug("Max rank set to maximum")
             max_rank = cp.size()
         if seed:
             rnd.seed(seed)
@@ -36,9 +50,9 @@ class ACA:
         self.tolerance = tolerance
         self.max_rank = max_rank
         self.start_index = start_index
-        self.start_indices = start_indices
+        self.given_indices = given_indices
         self.restart_with_prev_pivots = restart_with_prev_pivots
-        self.restart_deltas = restart_deltas
+        self.given_deltas = given_deltas
         if start_samples is None:
             self.sample_indices, self.sample_values = self.generate_samples_student_distribution()
         else:
@@ -67,13 +81,17 @@ class ACA:
         self.dtw_calculations = len(self.sample_indices)
         self.start_rank = len(self.rows)
         self.start_size = self.cp.size()
-        print(self.amount_of_samples_per_row)
 
     def choose_starting_pivot(self, new_run, current_state=None):
+        """
+        Function that chooses a starting pivot for the ACA algorithm.
+        :param new_run: Boolean that signifies if this is a new run or not.
+        :param current_state: Needed if new_run = False.
+        """
         if new_run or len(self.rows) == 0:
             # Start random row
             if self.restart_with_prev_pivots:
-                pivot_index = self.start_indices[0]
+                pivot_index = self.given_indices[0]
             elif self.start_index and 0 <= self.start_index <= self.cp.size():
                 pivot_index = self.start_index
             else:
@@ -83,6 +101,9 @@ class ACA:
         return pivot_index
 
     def choose_new_pivot(self, row, current_state):
+        """
+        Chooses a new pivot in a given row and state.
+        """
         new_row_abs = np.abs(row)
         row_without_already_sampled_indices = np.delete(new_row_abs, self.indices, axis=0)
         new_max = np.max(row_without_already_sampled_indices)
@@ -99,14 +120,16 @@ class ACA:
 
 
     def aca_symmetric_body(self, iters_no_improvement=100, new_run=True, m5=False):
+        """
+        Runs the ACA algorithm starting from the last ACA state, if the last ACA state is self.ACA_states[0], new_run
+        should be enabled. If m5=True one iteration of the ACA algorithm is forced, is used for the maximal update.
+        """
         m = len(self.rows)
         best_m = len(self.rows)
         current_aca_state = copy.deepcopy(self.ACA_states[-1])
         pivot_index = self.choose_starting_pivot(new_run, current_state=current_aca_state)
         if m5:
             current_aca_state["stopcrit"] = False
-        if m5 is None:
-            print("test", current_aca_state["stopcrit"], current_aca_state["best remaining average"])
         while m < self.max_rank and not current_aca_state["stopcrit"]:
             current_aca_state = copy.deepcopy(self.ACA_states[-1])
             # Calculate the current approximation for row of pivot
@@ -120,7 +143,7 @@ class ACA:
             if not self.restart_with_prev_pivots:
                 new_delta = new_row[pivot_index]
             else:
-                new_delta = self.restart_deltas[m]
+                new_delta = self.given_deltas[m]
 
              # If delta is zero, substitute by max value in the w vector
             if new_delta == 0:
@@ -154,8 +177,6 @@ class ACA:
                 current_aca_state["best remaining average"] = remaining_average
                 best_m = m
             elif m > best_m + iters_no_improvement:
-                logger.debug("No improvement for 100 ranks, current rank: " + str(m))
-                estimated_error = sqrt(current_aca_state["best remaining average"]) / sqrt(self.initial_average)
                 self.ACA_states.append(current_aca_state)
                 return best_m
 
@@ -185,7 +206,7 @@ class ACA:
                 current_aca_state["prev_pivot"] = pivot_index
             else:
                 try:
-                    pivot_index = self.start_indices[m]
+                    pivot_index = self.given_indices[m]
                     current_aca_state["prev_pivot"] = pivot_index
                 except:
                     self.ACA_states.append(current_aca_state)
@@ -194,26 +215,27 @@ class ACA:
             m += 1
             estimated_error = sqrt(current_aca_state["best remaining average"]) / sqrt(self.initial_average)
 
-            if current_aca_state["stopcrit"]:
-                logger.debug("stopcrit: Approximated error: " + str(estimated_error))
-            else:
-                logger.debug("Max rank " + str(self.max_rank) + "achieved, Approximated error: " + str(estimated_error))
-
             self.ACA_states.append(current_aca_state)
             if m5:
                 return best_m
         return best_m
 
     def getApproximation(self):
+        """
+        Function that returns the approximation and fills in the rows calculated in the exact update.
+        """
         results = self.calc_symmetric_matrix_approx(self.rows, self.deltas, self.current_rank)
         for i in self.full_dtw_rows:
-            all_dtw = np.transpose(self.cp.sample_row(i)) #TODO
+            all_dtw = np.transpose(self.cp.sample_row(i))
             results[:,i] = all_dtw
             results[i, :] = all_dtw
         return results
 
 
     def calc_symmetric_matrix_approx(self, rows, deltas, rank):
+        """
+        Calculates the ACA approximation.
+        """
         rows_array = np.array(rows)[0:rank]
         deltas_array = np.array(deltas)[0:rank]
         cols = np.transpose(rows_array).copy()
@@ -224,6 +246,9 @@ class ACA:
 
 
     def generate_samples_student_distribution(self, error_margin=0.02):
+        """
+        Generates the samples for ACA stopcrit.
+        """
         amount_sampled = 0
         t = 3.39
         tolerance = np.infty
@@ -262,27 +287,32 @@ class ACA:
             average_so_far = np.mean(squared)
             std_so_far = np.std(squared)
             tolerance = (t * std_so_far) / (sqrt(amount_sampled) * average_so_far)
-        logger.debug("Sample size: " + str(amount_sampled))
         return sample_indices, sample_values
 
     def extend(self, timeseries, solved_matrix=None, method="method1"):
+        """
+        A function that extends a given ACA approximation given an update method.
+        """
         if self.max_rank >= self.cp.size():
             self.max_rank += 1
         start_index = self.cp.size()
         self.cp.add_timeseries(timeseries, solved_matrix)
         end_index = self.cp.size()
-        if method == "method1":
+        if method == "method1" or method == "skeleton update":
             self.do_skeleton_update(start_index, end_index)
-        elif method == "method2":
+        elif method == "method2" or method == "tolerance-based update":
             self.do_tolerance_based_additive_update(start_index, end_index)
-        elif method == "method3":
+        elif method == "method3" or method == "adaptive update":
             self.do_adaptive_update(start_index, end_index)
-        elif method == "method4":
+        elif method == "method4"  or method == "exact update":
             self.do_exact_additive_update(start_index, end_index)
-        elif method == "method5":
+        elif method == "method5"  or method == "maximal update":
             self.do_maximal_additive_update(timeseries, start_index, end_index)
 
     def do_exact_additive_update(self, start_index, end_index):
+        """
+        Does an exact update.
+        """
         for next in range(start_index, end_index):
             for i in range(len(self.rows)):
                 self.rows[i] = np.append(self.rows[i], [0])
@@ -290,6 +320,9 @@ class ACA:
         self.dtw_calculations += self.cp.size() * (end_index-start_index)
 
     def do_tolerance_based_additive_update(self, start_index, end_index):
+        """
+        Does an tolerance-based update.
+        """
         self.do_skeleton_update(start_index, end_index)
         self.add_extra_samples_and_update_states(start_index, end_index)
         prev_rank = len(self.rows)
@@ -298,6 +331,9 @@ class ACA:
         self.dtw_calculations += new_rows * self.cp.size() + (end_index-start_index)*self.amount_of_samples_per_row
 
     def do_skeleton_update(self, start_index, end_index):
+        """
+        Does an skeleton update.
+        """
         for i in range(len(self.rows)):
             new_values = []
             for m in range(start_index, end_index):
@@ -311,12 +347,18 @@ class ACA:
         self.dtw_calculations += (end_index-start_index)*len(self.rows)
 
     def do_maximal_additive_update(self, timeseries, start_index, end_index):
+        """
+        Does an maximal update.
+        """
         self.do_skeleton_update(start_index, end_index)
         for _ in timeseries:
             self.current_rank = self.aca_symmetric_body(new_run=False, m5=True)
         self.dtw_calculations += (end_index-start_index) * self.cp.size() + (end_index-start_index)*len(self.rows)
 
     def do_adaptive_update(self, start_index, end_index):
+        """
+        Does an adaptive update.
+        """
         prev_rank = len(self.rows)
         self.extend_and_remove_prior_rows(start_index,end_index)
         removed = abs(len(self.rows) - prev_rank)
@@ -325,6 +367,9 @@ class ACA:
         self.dtw_calculations += new_rows * self.cp.size() + (end_index-start_index)*(self.amount_of_samples_per_row + abs(prev_rank-removed))
 
     def extend_and_remove_prior_rows(self, start_index, end_index):
+        """
+        Step 1 of the adaptive update.
+        """
         new_sample_values, new_sample_indices = self.find_new_samples_for_ts(start_index)
         for m in range(start_index+1, end_index):
             tmp_sv, tmp_si = self.find_new_samples_for_ts(m)
@@ -348,11 +393,18 @@ class ACA:
                     self.ACA_states = self.ACA_states[:i+1]
                     return
 
+
     def get_DTW_calculations(self):
+        """
+        Returns the amount of DTW-calculations done by the current ACA algorithm and possible updates.
+        """
         start_calc = self.start_rank*self.start_size
         return self.dtw_calculations + start_calc
 
     def add_extra_samples_and_update_states(self, start_index, end_index):
+        """
+        Finds new samples and updates previous ACA states.
+        """
         for m in range(start_index, end_index):
             new_sample_values, new_sample_indices = self.find_new_samples_for_ts(m)
             for index_state, state in zip(range(len(self.ACA_states)), self.ACA_states):

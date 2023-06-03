@@ -1,20 +1,24 @@
 """
-File containing the the distance/similarity functions to compare different time series
-# Implemented functions:
-#   Euclidean Distance (ED)
-#   Dynamic Time Warping (DTW)
-#   Move Split Merge (MSM)
-"""
+###################################################################################################################
+    All functions in this file were made by Mathias Pede, some functions that were unnecessary were removed.
+    The original code can be found in [1] and was published alongside [2].
 
-"""
-MATHIAS PEDE
-"""
+    [1]: M. Pede. Fast-time-series-clustering, 2020.
+    https://github.com/MathiasPede/Fast-Time-Series-Clustering Accessed: (October 23,2022).
 
+    [2]: M. Pede. Snel clusteren van tijdreeksen via lage-rang benaderingen. Master’s
+    thesis, Faculteit Ingenieurswetenschappen, KU Leuven, Leuven, Belgium, 2020.
+###################################################################################################################
+"""
 from dtaidistance.dtw import distance_fast, distance_matrix_fast
-from .ed import ed, ed_matrix
 import numpy as np
 
+"""
+File containing the the distance/similarity functions to compare different time series
+# Implemented functions:
+#   Dynamic Time Warping (DTW)
 
+"""
 def dtw(s1, s2, args: dict):
     if 'window' in args:
         window = args['window']
@@ -40,7 +44,6 @@ def dtw_matrix(series, args: dict):
 
 
 functions = {
-    'ed': (ed, ed_matrix),
     'dtw': (dtw, dtw_matrix)
 }
 
