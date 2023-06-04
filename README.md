@@ -7,7 +7,8 @@ This implementation is an extension on the code given by Mathias Pede [2], which
 To create an ACA approximation, use the following code:
 
     from src.extendable_aca import ACA
-    cp = ClusterProblem(starting_series, "dtw", compare_args={"window": len(series) - 1}, solved_matrix=None)
+    from src.cluster_problem import ClusterProblem
+    cp = ClusterProblem(starting_series, "dtw", compare_args={"window": len(starting_series) - 1}, solved_matrix=None)
     ACA_approximation = ACA(cp, tolerance=0.05, max_rank=rank)
     
 #### Extending previous ACA approximations
